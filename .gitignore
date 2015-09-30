@@ -1,0 +1,9 @@
+./dep/*
+./out/*
+*.d
+*.elf
+*.lst
+*.map
+*.o
+*.bin
+*.a

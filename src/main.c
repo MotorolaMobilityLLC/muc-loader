@@ -32,6 +32,7 @@
   */
 /* Includes ------------------------------------------------------------------*/
 #include <stdbool.h>
+#include <string.h>
 #include <stm32l4xx_hal.h>
 
 /* USER CODE BEGIN Includes */
@@ -53,7 +54,15 @@ struct memory_map {
 };
 /* USER CODE BEGIN PV */
 /* Private variables ---------------------------------------------------------*/
-static const char boot_mode_flag[8] = {'T', 'O', 'O', 'B', 'E', 'D', 'O', 'M'};
+
+static const char bootmode_flag[8] =  {'B', 'O', 'O', 'T', 'M', 'O', 'D', 'E'};
+static const char flashing_flag[8] =  {'F', 'L', 'A', 'S', 'H', 'I', 'N', 'G'};
+
+enum BootState {
+    BOOT_STATE_NORMAL,        /* Boot main program */
+    BOOT_STATE_REQUEST_FLASH, /* Boot flashing program */
+    BOOT_STATE_FLASHING,      /* Flashing in progress  */
+};
 
 static const struct memory_map mmap[4] = {
   {"nuttx", ((uint32_t)0x08008000), ((uint32_t)0x0807f800)},
@@ -205,35 +214,45 @@ void Boot2Partition(int pIndex)
   }
 }
 
-bool CheckFlashMode(void)
+enum BootState CheckFlashMode(void)
 {
   char *bootModeFlag;
-  bool bootMode	= false;
+  enum BootState bootState = BOOT_STATE_NORMAL;
 
   /* Check For Flash Mode Bit */
   bootModeFlag = (char *)(FLASH_BASE + FLASH_SIZE - FLASH_PAGE_SIZE);
-  if (!memcmp(bootModeFlag, boot_mode_flag, sizeof(boot_mode_flag)))
+  if (!memcmp(bootModeFlag, bootmode_flag, sizeof(bootmode_flag)))
   {
-    bootMode = true;
-  }
-  else
-  {
-    bootMode = false;
+    bootState = BOOT_STATE_REQUEST_FLASH;
   }
 
-  return bootMode;
+  if (!memcmp(bootModeFlag, flashing_flag, sizeof(flashing_flag)))
+  {
+    bootState = BOOT_STATE_FLASHING;
+  }
+
+  return bootState;
 }
 
 int main(void)
 {
-  /* USER CODE BEGIN 1 */
-  if(!CheckFlashMode())
-  {
+  enum BootState bootState = CheckFlashMode();
+
+  switch(bootState) {
+  case BOOT_STATE_REQUEST_FLASH:
+     /* Erase the Flash Mode Barker */
+     ErasePage((uint32_t)(FLASH_BASE + FLASH_SIZE - FLASH_PAGE_SIZE));
+     /* fall through */
+  case BOOT_STATE_FLASHING:
+     Boot2Partition(FLASH_LOADER_INDEX);
+  break;
+  case BOOT_STATE_NORMAL:
+  default:
      Boot2Partition(BOOT_PARTITION_INDEX);
+  break;
   }
 
-  ErasePage((uint32_t)(FLASH_BASE + FLASH_SIZE - FLASH_PAGE_SIZE));
-
+  /* fallback to booting to flash loader */
   Boot2Partition(FLASH_LOADER_INDEX);
 
   /* USER CODE END 1 */

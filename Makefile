@@ -82,7 +82,7 @@ $(OUT_DIR)/%.o : %.s $(DEP_DIR) $(OUT_DIR)
 	@echo "CC:      $(notdir $<)"
 	$(CC) $(CFLAGS) -c -o $@ $< -MMD -MF $(DEP_DIR)/$(*F).d
 
-all:  $(OUT_DIR)/$(TARGET).bin  $(OUT_DIR)/$(TARGET).lst
+all:  $(OUT_DIR)/$(TARGET).bin $(OUT_DIR)/$(TARGET).hex $(OUT_DIR)/$(TARGET).lst
 
 $(DEP_DIR) $(OUT_DIR):
 	@echo "MKDIR:   $@"; mkdir -p $@
@@ -90,6 +90,10 @@ $(DEP_DIR) $(OUT_DIR):
 $(OUT_DIR)/$(TARGET).bin: $(OUT_DIR)/$(TARGET).elf
 	@echo "CP: $(TARGET).bin"
 	$(OBJCOPY) -O binary $< $@
+
+$(OUT_DIR)/$(TARGET).hex: $(OUT_DIR)/$(TARGET).elf
+	@echo "CP: $(TARGET).hex"
+	$(OBJCOPY) -O ihex $< $@
 
 $(OUT_DIR)/$(TARGET).lst: $(OUT_DIR)/$(TARGET).elf
 	@echo "OBJDUMP: $(@)"

@@ -46,6 +46,9 @@ typedef void (*Function_Pointer)(void);
 #define FLASH_LOADER_INDEX	2
 #define JUMP_ADDRESS_OFFSET	4
 
+#define FORCE_FLASH_GPIO_PIN    GPIO_PIN_9
+#define FORCE_FLASH_GPIO_PORT   GPIOB
+
 /* Private variables ---------------------------------------------------------*/
 struct memory_map {
   char *pname;
@@ -219,6 +222,8 @@ enum BootState CheckFlashMode(void)
   char *bootModeFlag;
   enum BootState bootState = BOOT_STATE_NORMAL;
 
+  MX_GPIO_Init();
+
   /* Check For Flash Mode Bit */
   bootModeFlag = (char *)(FLASH_BASE + FLASH_SIZE - FLASH_PAGE_SIZE);
   if (!memcmp(bootModeFlag, bootmode_flag, sizeof(bootmode_flag)))
@@ -229,6 +234,12 @@ enum BootState CheckFlashMode(void)
   if (!memcmp(bootModeFlag, flashing_flag, sizeof(flashing_flag)))
   {
     bootState = BOOT_STATE_FLASHING;
+  }
+
+  if (HAL_GPIO_ReadPin(FORCE_FLASH_GPIO_PORT, FORCE_FLASH_GPIO_PIN)
+                        == GPIO_PIN_SET)
+  {
+    bootState = BOOT_STATE_REQUEST_FLASH;
   }
 
   return bootState;
@@ -330,14 +341,13 @@ void MX_GPIO_Init(void)
   GPIO_InitTypeDef GPIO_InitStruct;
 
   /* GPIO Ports Clock Enable */
-  __GPIOC_CLK_ENABLE();
+  __GPIOB_CLK_ENABLE();
 
-  /*Configure GPIO pin : PC4 */
-  GPIO_InitStruct.Pin = GPIO_PIN_4;
-  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+  /*Configure GPIO pin : PB9 - FORCE FLASH MODE */
+  GPIO_InitStruct.Pin = FORCE_FLASH_GPIO_PIN;
+  GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
-  GPIO_InitStruct.Speed = GPIO_SPEED_LOW;
-  HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
+  HAL_GPIO_Init(FORCE_FLASH_GPIO_PORT, &GPIO_InitStruct);
 
 }
 

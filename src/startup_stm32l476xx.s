@@ -2,8 +2,8 @@
   ******************************************************************************
   * @file      startup_stm32l476xx.s
   * @author    MCD Application Team
-  * @version   V1.0.0
-  * @date      26-June-2015
+  * @version   V1.1.0
+  * @date      16-September-2015
   * @brief     STM32L476xx devices vector table for Atollic 
   *            TrueSTUDIO toolchain.
   *            This module performs:
@@ -56,24 +56,34 @@ defined in linker script */
 .word	_ebss
 
 .equ  BootRAM,        0xF1E0F85F
-/**
- * @brief  This is the code that gets called when the processor first
- *          starts execution following a reset event. Only the absolutely
- *          necessary set is performed, after which the application
- *          supplied main() routine is called.
- * @param  None
- * @retval : None
-*/
 
-    .section	.text.Reset_Handler
-	.weak	Reset_Handler
-	.type	Reset_Handler, %function
-Reset_Handler:
+    .section	.text._Start
+	.weak	_Start
+	.type	_Start, %function
+_Start:
   ldr   sp, =_estack    /* Atollic update: set stack pointer */
 
 /* Copy the data segment initializers from flash to SRAM */
-  movs	r1, #0
-  b	LoopCopyDataInit
+	movs	r1, #0
+	ldr	r2, =_sr_isrv
+	b	LoopCopyTextROInit
+
+CopyTextROInit:
+	ldr	r3, =_sf_isrv
+	ldr	r3, [r3, r1]
+	str	r3, [r0, r1]
+	adds	r1, r1, #4
+
+LoopCopyTextROInit:
+	ldr	r0, =_sr_isrv
+	ldr	r3, =__fini_array_end
+	adds	r2, r0, r1
+	cmp	r2, r3
+	bcc	CopyTextROInit
+
+	movs	r1, #0
+	ldr	r2, =_sdata
+	b	LoopCopyDataInit
 
 CopyDataInit:
 	ldr	r3, =_sidata
@@ -87,6 +97,7 @@ LoopCopyDataInit:
 	adds	r2, r0, r1
 	cmp	r2, r3
 	bcc	CopyDataInit
+
 	ldr	r2, =_sbss
 	b	LoopFillZerobss
 /* Zero fill the bss segment. */
@@ -98,13 +109,25 @@ LoopFillZerobss:
 	ldr	r3, = _ebss
 	cmp	r2, r3
 	bcc	FillZerobss
+	b	Reset_Handler
 
+.size	_Start, .-_Start
+
+/**
+ * @brief  This is the code that gets called when the processor first
+ *          starts execution following a reset event. Only the absolutely
+ *          necessary set is performed, after which the application
+ *          supplied main() routine is called.
+ * @param  None
+ * @retval : None
+*/
+Reset_Handler:
 /* Call the clock system intitialization function.*/
     bl  SystemInit
 /* Call static constructors */
     bl __libc_init_array
 /* Call the application's entry point.*/
-	bl	main
+    bl	main
 
 LoopForever:
     b LoopForever
@@ -123,7 +146,15 @@ LoopForever:
 Default_Handler:
 Infinite_Loop:
 	b	Infinite_Loop
-	.size	Default_Handler, .-Default_Handler
+.size	Default_Handler, .-Default_Handler
+
+	.section	.flash_vector,"a",%progbits
+	.type	g_flashVectors, %object
+	.size	g_flashVectors, .-g_flashVectors
+
+g_flashVectors:
+	.word	_estack
+	.word	_Start
 /******************************************************************************
 *
 * The minimal vector table for a Cortex-M4.  Note that the proper constructs
@@ -134,7 +165,6 @@ Infinite_Loop:
  	.section	.isr_vector,"a",%progbits
 	.type	g_pfnVectors, %object
 	.size	g_pfnVectors, .-g_pfnVectors
-
 
 g_pfnVectors:
 	.word	_estack
@@ -232,7 +262,7 @@ g_pfnVectors:
 	.word	SWPMI1_IRQHandler
 	.word	TSC_IRQHandler
 	.word	LCD_IRQHandler
-	.word 0
+	.word	0
 	.word	RNG_IRQHandler
 	.word	FPU_IRQHandler
 
@@ -245,16 +275,16 @@ g_pfnVectors:
 *
 *******************************************************************************/
 
-  .weak	NMI_Handler
+	.weak	NMI_Handler
 	.thumb_set NMI_Handler,Default_Handler
 
-  .weak	HardFault_Handler
+	.weak	HardFault_Handler
 	.thumb_set HardFault_Handler,Default_Handler
 
-  .weak	MemManage_Handler
+	.weak	MemManage_Handler
 	.thumb_set MemManage_Handler,Default_Handler
 
-  .weak	BusFault_Handler
+	.weak	BusFault_Handler
 	.thumb_set BusFault_Handler,Default_Handler
 
 	.weak	UsageFault_Handler

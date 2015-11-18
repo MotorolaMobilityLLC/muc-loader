@@ -1,10 +1,12 @@
-TARGET       = boot
+TOPDIR := ${shell pwd}
 
 CUBE_DIR     = STM32Cube_FW_L4_V1.0.0
 OUT_DIR      = out
 DEP_DIR      = dep
+INC_DIR      = include
 SRC_DIR      = src
-
+COM_DIR      = common
+CFG_DIR      = configs
 
 CHIPSET          = STM32L4xx
 CHIPSET_LC       = stm32l4xx
@@ -15,7 +17,6 @@ BOARD            = STM32L476G-Discovery
 HAL_DIR      = $(CUBE_DIR)/Drivers/$(CHIPSET)_HAL_Driver
 CMSIS_DIR    = $(CUBE_DIR)/Drivers/CMSIS
 CMSIS_DIR_ST = $(CMSIS_DIR)/Device/ST/$(CHIPSET)
-BSP_DIR      = $(CUBE_DIR)/Drivers/BSP/$(BOARD)
 
 PREFIX     = arm-none-eabi
 CC         = $(PREFIX)-gcc
@@ -29,11 +30,25 @@ DEFS       = -D$(TARGET_DEVICE)
 DEFS      += -DUSE_HAL_DRIVER
 DEFS      += -DUSE_DBPRINTF
 
+include $(TOPDIR)/.config
+
+ifeq ($(CONFIG_DEBUG),y)
+DEFS      += -D_DEBUG
+endif
+
+DEFS      += -DMOD_TYPE_$(CONFIG_MOD_TYPE)
+DEFS      += -DMOD_BOARDID_PID=$(CONFIG_ARCH_BOARDID_PID)
+DEFS      += -DMOD_BOARDID_VID=$(CONFIG_ARCH_BOARDID_VID)
+DEFS      += -DMOD_BOOT_VERSION=$(CONFIG_BOOT_VERSION)
+DEFS      += -DVECT_TAB_SRAM
+
 INCS       = -I$(HAL_DIR)/Inc/
+INCS      += -I$(CFG_DIR)/$(CONFIG_MOD_TYPE)/$(INC_DIR)/
 INCS      += -I.
+INCS      += -I$(INC_DIR)/
+INCS      += -I$(COM_DIR)/$(INC_DIR)/
 INCS      += -I$(CMSIS_DIR)/Include/
 INCS      += -I$(CMSIS_DIR)/Device/ST/$(CHIPSET)/Include
-INCS      += -I$(BSP_DIR)/
 INCS      += -I$(SRC_DIR)/
 
 CFLAGS     = -Wall -g -std=c99 -Os
@@ -44,26 +59,41 @@ CFLAGS    += $(INCS) $(DEFS)
 
 CSRCS       = main.c
 CSRCS      += system_stm32l4xx.c
+CSRCS      += stm32l4xx_hal_msp.c
 CSRCS      += stm32l4xx_it.c
+CSRCS      += stm32l4xx_flash.c
+
+CSRCS      += debug.c \
+	      utils.c \
+	      gbcore.c \
+	      gbfirmware.c \
+	      datalink.c \
+	      es3_unipro.c
+
 # Basic HAL libraries
 CSRCS      += $(CHIPSET_LC)_hal_rcc.c \
               $(CHIPSET_LC)_hal_rcc_ex.c \
               $(CHIPSET_LC)_hal.c \
-              $(CHIPSET_LC)_hal_msp.c \
               $(CHIPSET_LC)_hal_cortex.c \
               $(CHIPSET_LC)_hal_gpio.c  \
-              $(CHIPSET_LC)_hal_flash.c  \
-              $(CHIPSET_LC)_hal_flash_ex.c  \
+              $(CHIPSET_LC)_hal_spi.c  \
+              $(CHIPSET_LC)_hal_dma.c  \
+              $(CHIPSET_LC)_hal_flash.c \
+              $(CHIPSET_LC)_hal_flash_ex.c \
+              $(CHIPSET_LC)_hal_uart.c \
+              $(CHIPSET_LC)_hal_uart_ex.c \
               $(CHIPSET_LC)_hal_pwr_ex.c
 
 SSRCS       = startup_stm32l476xx.s
 
 VPATH      = ./src
-VPATH     += $(BSP_DIR)
+VPATH     += $(COM_DIR)/src
 VPATH     += $(HAL_DIR)/Src
 VPATH     += $(DEV_DIR)/Source/
 
 LIBS       = -L$(CMSIS_DIR)/Lib
+
+TARGET       = boot_$(CONFIG_MOD_TYPE)
 
 # Linker flags
 LDFLAGS    = -Wl,--gc-sections -g -Wl,-Map=$(OUT_DIR)/$(TARGET).map $(LIBS) -T$(SRC_DIR)/$(TARGET_DEVICE_LC).ld
@@ -109,3 +139,6 @@ $(OUT_DIR)/$(TARGET).elf: $(OBJS)
 clean:
 	@echo "RMDIR:   dep"          ; rm -fr dep
 	@echo "RMDIR:   out"          ; rm -fr out
+
+distclean: clean
+	-rm -rf .config

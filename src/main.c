@@ -31,13 +31,18 @@
   ******************************************************************************
   */
 /* Includes ------------------------------------------------------------------*/
-#include <stdbool.h>
+#include <stdlib.h>
 #include <string.h>
-#include <stm32l4xx_hal.h>
+#include <stdbool.h>
+#include <debug.h>
+#include <greybus.h>
+#include "datalink.h"
+#include "stm32l4xx_hal.h"
+#include "stm32l4xx_hal_mod.h"
+#include "stm32l4xx_hal_uart.h"
+#include "stm32l4xx_flash.h"
 
-/* USER CODE BEGIN Includes */
 
-/* USER CODE END Includes */
 /* Private typedef -----------------------------------------------------------*/
 typedef void (*Function_Pointer)(void);
 
@@ -45,9 +50,7 @@ typedef void (*Function_Pointer)(void);
 #define BOOT_PARTITION_INDEX	0
 #define FLASH_LOADER_INDEX	2
 #define JUMP_ADDRESS_OFFSET	4
-
-#define FORCE_FLASH_GPIO_PIN    GPIO_PIN_9
-#define FORCE_FLASH_GPIO_PORT   GPIOB
+#define MMAP_PARTITION_NUM	4
 
 /* Private variables ---------------------------------------------------------*/
 struct memory_map {
@@ -57,7 +60,6 @@ struct memory_map {
 };
 /* USER CODE BEGIN PV */
 /* Private variables ---------------------------------------------------------*/
-
 static const char bootmode_flag[8] =  {'B', 'O', 'O', 'T', 'M', 'O', 'D', 'E'};
 static const char flashing_flag[8] =  {'F', 'L', 'A', 'S', 'H', 'I', 'N', 'G'};
 
@@ -67,123 +69,53 @@ enum BootState {
     BOOT_STATE_FLASHING,      /* Flashing in progress  */
 };
 
-static const struct memory_map mmap[4] = {
+static const struct memory_map mmap[MMAP_PARTITION_NUM] = {
   {"nuttx", ((uint32_t)0x08008000), ((uint32_t)0x0807f800)},
   {0, 0, 0},
-  {"nuttx-flash", ((uint32_t)0x080E0000), ((uint32_t)0x080ff800)},
+  {0, 0, 0},
   {0, 0, 0},
 };
 
-uint32_t FirstPage = 0, NbOfPages = 0, BankNumber = 0;
-uint32_t Address = 0, PAGEError = 0;
-__IO uint32_t data32 = 0 , MemoryProgramStatus = 0;
+SPI_HandleTypeDef hspi;
+DMA_HandleTypeDef hdma_spi2_rx;
+DMA_HandleTypeDef hdma_spi2_tx;
+UART_HandleTypeDef huart;
 
-/*Variable used for Erase procedure*/
-static FLASH_EraseInitTypeDef EraseInitStruct;
+/* Buffer used for transmission */
+uint8_t aTxBuffer[MAX_DMA_BUF_SIZE];
+/* Buffer used for reception */
+uint8_t aRxBuffer[MAX_DMA_BUF_SIZE];
+
+volatile bool  armDMA = false;
+volatile bool respReady = true;
+uint16_t negotiated_pl_size;
+
+/* USER CODE END PV */
+struct ring_buf *txp_rb;
+e_armDMAtype armDMAtype;
+e_protocol_type protocol_type;
+
+/* USER CODE BEGIN PV */
+/* Private variables ---------------------------------------------------------*/
 
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
-void Boot2Partition(int pIndex);
-static uint32_t GetPage(uint32_t Address);
-static uint32_t GetBank(uint32_t Address);
+static void MX_DMA_Init(void);
+static void MX_SPI_Init(void);
+static void MX_USART_UART_Init(void);
+static void Error_Handler(void);
 
 /* USER CODE BEGIN PFP */
 /* Private function prototypes -----------------------------------------------*/
-
+static int process_network_msg(struct mods_spi_msg *spi_msg);
+void Boot2Partition(int pIndex);
 /* USER CODE END PFP */
 
 /* USER CODE BEGIN 0 */
-
-/* USER CODE END 0 */
-
-/**
-  * @brief  Gets the page of a given address
-  * @param  Addr: Address of the FLASH Memory
-  * @retval The page of a given address
-  */
-static uint32_t GetPage(uint32_t Addr)
-{
-  uint32_t page = 0;
-
-  if (Addr < (FLASH_BASE + FLASH_BANK_SIZE))
-  {
-    /* Bank 1 */
-    page = (Addr - FLASH_BASE) / FLASH_PAGE_SIZE;
-  }
-  else
-  {
-    /* Bank 2 */
-    page = (Addr - (FLASH_BASE + FLASH_BANK_SIZE)) / FLASH_PAGE_SIZE;
-  }
-
-  return page;
-}
-
-/**
-  * @brief  Gets the bank of a given address
-  * @param  Addr: Address of the FLASH Memory
-  * @retval The bank of a given address
-  */
-static uint32_t GetBank(uint32_t Addr)
-{
-  uint32_t bank = 0;
-
-  if (READ_BIT(SYSCFG->MEMRMP, SYSCFG_MEMRMP_FB_MODE) == 0)
-  {
-	/* No Bank swap */
-    if (Addr < (FLASH_BASE + FLASH_BANK_SIZE))
-    {
-      bank = FLASH_BANK_1;
-    }
-    else
-    {
-      bank = FLASH_BANK_2;
-    }
-  }
-  else
-  {
-	/* Bank swap */
-    if (Addr < (FLASH_BASE + FLASH_BANK_SIZE))
-    {
-      bank = FLASH_BANK_2;
-    }
-    else
-    {
-      bank = FLASH_BANK_1;
-    }
-  }
-
-  return bank;
-}
-
-void ErasePage(uint32_t pageAddress)
-{
-  /* Unlock the Flash to enable the flash control register access */
-  HAL_FLASH_Unlock();
-
-  /* Clear OPTVERR bit set on virgin samples */
-  __HAL_FLASH_CLEAR_FLAG(FLASH_FLAG_OPTVERR);
-
-  /* Get the 1st page to erase */
-  FirstPage = GetPage(pageAddress);
-  /* Get the number of pages to erase from 1st page */
-  NbOfPages = 1;
-  /* Get the bank */
-  BankNumber = GetBank(pageAddress);
-  /* Fill EraseInit structure*/
-  EraseInitStruct.TypeErase   = FLASH_TYPEERASE_PAGES;
-  EraseInitStruct.Banks       = BankNumber;
-  EraseInitStruct.Page        = FirstPage;
-  EraseInitStruct.NbPages     = NbOfPages;
-
-  HAL_FLASHEx_Erase(&EraseInitStruct, &PAGEError);
-
-  HAL_FLASH_Lock();
-}
-
+/* Private functions ---------------------------------------------------------*/
 void Boot2Partition(int pIndex)
 {
   Function_Pointer  pJumpToFunction;
@@ -225,7 +157,7 @@ enum BootState CheckFlashMode(void)
   MX_GPIO_Init();
 
   /* Check For Flash Mode Bit */
-  bootModeFlag = (char *)(FLASH_BASE + FLASH_SIZE - FLASH_PAGE_SIZE);
+  bootModeFlag = (char *)(FLASHMODE_FLAG_PAGE);
   if (!memcmp(bootModeFlag, bootmode_flag, sizeof(bootmode_flag)))
   {
     bootState = BOOT_STATE_REQUEST_FLASH;
@@ -236,8 +168,7 @@ enum BootState CheckFlashMode(void)
     bootState = BOOT_STATE_FLASHING;
   }
 
-  if (HAL_GPIO_ReadPin(FORCE_FLASH_GPIO_PORT, FORCE_FLASH_GPIO_PIN)
-                        == GPIO_PIN_SET)
+  if (mods_force_flash_get() == PIN_SET)
   {
     bootState = BOOT_STATE_REQUEST_FLASH;
   }
@@ -245,26 +176,62 @@ enum BootState CheckFlashMode(void)
   return bootState;
 }
 
+/* USER CODE END 0 */
+void setup_exchange(void)
+{
+  uint32_t buf_size;
+
+  /* Start the Full Duplex Communication process */
+  /* While the SPI in TransmitReceive process, user can transmit data through
+     "aTxBuffer" buffer & receive data through "aRxBuffer" */
+  if (armDMA == true) {
+    /* Response is ready, signal INT to base */
+    if(respReady == true) {
+       mods_muc_int_set(PIN_SET);
+    }
+
+    /* Wait for WAKE_N to arm DMA */
+    if(mods_wake_n_get() == PIN_SET) {
+      return;
+    }
+
+    dbgprint("WKE-L\r\n");
+
+    /* select DMA buffer size */
+    if(armDMAtype == initial)
+      buf_size = INITIAL_DMA_BUF_SIZE + DL_HEADER_BITS_SIZE;
+    else
+      buf_size = negotiated_pl_size + DL_HEADER_BITS_SIZE;
+
+    if(HAL_SPI_TransmitReceive_DMA(&hspi, (uint8_t*)aTxBuffer, (uint8_t *)aRxBuffer, buf_size) != HAL_OK) {
+      /* Transfer error in transmission process */
+      Error_Handler();
+    }
+
+    dbgprinthex32(buf_size);
+    dbgprint("--ARMED\r\n");
+
+    armDMA = false;
+    mods_rfr_set(PIN_SET);
+  }
+}
+
 int main(void)
 {
   enum BootState bootState = CheckFlashMode();
 
   switch(bootState) {
-  case BOOT_STATE_REQUEST_FLASH:
-     /* Erase the Flash Mode Barker */
-     ErasePage((uint32_t)(FLASH_BASE + FLASH_SIZE - FLASH_PAGE_SIZE));
-     /* fall through */
-  case BOOT_STATE_FLASHING:
-     Boot2Partition(FLASH_LOADER_INDEX);
-  break;
   case BOOT_STATE_NORMAL:
+    Boot2Partition(BOOT_PARTITION_INDEX);
+  case BOOT_STATE_REQUEST_FLASH:
+    /* Erase the Flash Mode Barker */
+    ErasePage((uint32_t)(FLASHMODE_FLAG_PAGE));
+    /* fall through */
+  case BOOT_STATE_FLASHING:
+    /* fall through */
   default:
-     Boot2Partition(BOOT_PARTITION_INDEX);
-  break;
+    break;
   }
-
-  /* fallback to booting to flash loader */
-  Boot2Partition(FLASH_LOADER_INDEX);
 
   /* USER CODE END 1 */
 
@@ -278,22 +245,156 @@ int main(void)
 
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
+  MX_DMA_Init();
+  MX_SPI_Init();
+  MX_USART_UART_Init();
 
-  /* USER CODE BEGIN 2 */
+  dbgprint("\r\n--[MuC Loader]--\r\n");
+  dbgprint("-Flash Mode\r\n");
 
-  /* USER CODE END 2 */
+  /* Config SPI NSS in interrupt mode */
+  SPI_NSS_INT_CTRL_Config();
 
-  /* Infinite loop */
-  /* USER CODE BEGIN WHILE */
-  while (1)
-  {
-  /* USER CODE END WHILE */
+  armDMA = true;
+  respReady = false;
+  armDMAtype = initial;
+  protocol_type = datalink;
+  negotiated_pl_size = INITIAL_DMA_BUF_SIZE;
 
-  /* USER CODE BEGIN 3 */
-
+  while (1) {
+    setup_exchange();
   }
-  /* USER CODE END 3 */
+}
 
+int get_board_id(uint32_t *vend_id, uint32_t *prod_id)
+{
+  if (vend_id) {
+    *vend_id = MOD_BOARDID_VID;
+  }
+
+  if (prod_id) {
+    *prod_id = MOD_BOARDID_PID;
+  }
+
+  return 0;
+}
+
+int get_chip_id(uint32_t *mfg_id, uint32_t *prod_id)
+{
+
+  if (mfg_id) {
+    /* MIPI Manufacturer ID from http://mid.mipi.org/ */
+    *mfg_id = 0x0104;
+  }
+
+  if (prod_id) {
+    *prod_id = HAL_GetDEVID();
+  }
+
+  return 0;
+}
+
+int get_chip_uid(uint64_t *uid_high, uint64_t *uid_low)
+{
+  uint32_t regval;
+
+  regval = getreg32(STM32_UID_BASE);
+  *uid_low = regval;
+
+  regval = getreg32(STM32_UID_BASE + 4);
+  *uid_low |= ((uint64_t)regval) << 32;
+
+  regval = getreg32(STM32_UID_BASE + 8);
+  *uid_high = regval;
+
+  return 0;
+}
+
+int set_flashing_flag(void)
+{
+  char *bootModeFlag;
+
+  /* Flash Mode Flag */
+  bootModeFlag = (char *)(FLASHMODE_FLAG_PAGE);
+  if (memcmp(bootModeFlag, flashing_flag, sizeof(flashing_flag)))
+  {
+    /* write the flashmode flag */
+    return program_flash_data((uint32_t)(FLASHMODE_FLAG_PAGE),
+                      sizeof(flashing_flag), (uint8_t *)&flashing_flag[0]);
+  } else {
+    return 0;
+  }
+}
+
+static int process_network_msg(struct mods_spi_msg *spi_msg)
+{
+  struct mods_spi_msg *dl = spi_msg;
+
+  if(spi_msg->hdr_bits & HDR_BIT_VALID) {
+    if((spi_msg->hdr_bits & HDR_BIT_TYPE) == MSG_TYPE_NW ) {
+      /* Process mods message */
+      process_mods_msg(&spi_msg->m_msg);
+    } else if((spi_msg->hdr_bits & HDR_BIT_TYPE) == MSG_TYPE_DL ) {
+      process_mods_dl_msg(&dl->dl_msg);
+    } else {
+      return 0;
+    }
+  } else {
+    respReady = false;
+    process_sent_complete();
+  }
+  return 0;
+}
+
+/**
+  * @brief  TxRx Transfer completed callback.
+  * @param  hspi: SPI handle
+  * @retval None
+  */
+void HAL_SPI_TxRxCpltCallback(SPI_HandleTypeDef *hspi)
+{
+  memset(aTxBuffer,0,MAX_DMA_BUF_SIZE);
+  process_network_msg((struct mods_spi_msg *)aRxBuffer);
+  memset(aRxBuffer,0,MAX_DMA_BUF_SIZE);
+
+  armDMA = true;
+}
+
+/**
+  * @brief  EXTI line detection callback.
+  * @param  GPIO_Pin: Specifies the port pin connected to corresponding EXTI line.
+  * @retval None
+  */
+void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
+{
+  if( GPIO_Pin == GPIO_PIN_SPI_CS_N) {
+    mods_rfr_set(PIN_RESET);
+    mods_muc_int_set(PIN_RESET);
+  }
+}
+
+/**
+  * @brief  SPI error callbacks.
+  * @param  hspi: SPI handle
+  * @note   This example shows a simple way to report transfer error, and you can
+  *         add your own implementation.
+  * @retval None
+  */
+void HAL_SPI_ErrorCallback(SPI_HandleTypeDef *hspi)
+{
+
+}
+
+/**
+  * @brief  This function is executed in case of error occurrence.
+  * @param  None
+  * @retval None
+  */
+static void Error_Handler(void)
+{
+  while(1)
+  {
+  }
 }
 
 /** System Clock Configuration
@@ -303,20 +404,31 @@ void SystemClock_Config(void)
 
   RCC_OscInitTypeDef RCC_OscInitStruct;
   RCC_ClkInitTypeDef RCC_ClkInitStruct;
+  RCC_PeriphCLKInitTypeDef PeriphClkInit;
 
   RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSI;
   RCC_OscInitStruct.HSIState = RCC_HSI_ON;
   RCC_OscInitStruct.HSICalibrationValue = 16;
-  RCC_OscInitStruct.PLL.PLLState = RCC_PLL_NONE;
+  RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
+  RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSI;
+  RCC_OscInitStruct.PLL.PLLM = 1;
+  RCC_OscInitStruct.PLL.PLLN = 8;
+  RCC_OscInitStruct.PLL.PLLP = RCC_PLLP_DIV7;
+  RCC_OscInitStruct.PLL.PLLQ = RCC_PLLQ_DIV2;
+  RCC_OscInitStruct.PLL.PLLR = RCC_PLLR_DIV2;
   HAL_RCC_OscConfig(&RCC_OscInitStruct);
 
   RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_HCLK|RCC_CLOCKTYPE_SYSCLK
                               |RCC_CLOCKTYPE_PCLK1|RCC_CLOCKTYPE_PCLK2;
-  RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_HSI;
+  RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_PLLCLK;
   RCC_ClkInitStruct.AHBCLKDivider = RCC_SYSCLK_DIV1;
-  RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV2;
+  RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV1;
   RCC_ClkInitStruct.APB2CLKDivider = RCC_HCLK_DIV1;
-  HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_0);
+  HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_3);
+
+  PeriphClkInit.PeriphClockSelection = RCC_PERIPHCLK_USART1;
+  PeriphClkInit.Usart1ClockSelection = RCC_USART1CLKSOURCE_PCLK2;
+  HAL_RCCEx_PeriphCLKConfig(&PeriphClkInit);
 
   __PWR_CLK_ENABLE();
 
@@ -325,6 +437,59 @@ void SystemClock_Config(void)
   HAL_SYSTICK_Config(HAL_RCC_GetHCLKFreq()/1000);
 
   HAL_SYSTICK_CLKSourceConfig(SYSTICK_CLKSOURCE_HCLK);
+
+}
+
+/* USART init function */
+void MX_USART_UART_Init(void)
+{
+  huart.Instance = MOD_DEBUG_USART;
+  huart.Init.BaudRate = 115200;
+  huart.Init.WordLength = UART_WORDLENGTH_8B;
+  huart.Init.StopBits = UART_STOPBITS_1;
+  huart.Init.Parity = UART_PARITY_NONE;
+  huart.Init.Mode = UART_MODE_TX;
+  huart.Init.HwFlowCtl = UART_HWCONTROL_NONE;
+  huart.Init.OverSampling = UART_OVERSAMPLING_16;
+  huart.Init.OneBitSampling = UART_ONEBIT_SAMPLING_DISABLED;
+  huart.AdvancedInit.AdvFeatureInit = UART_ADVFEATURE_NO_INIT;
+  HAL_UART_Init(&huart);
+}
+
+/* SPI init function */
+void MX_SPI_Init(void)
+{
+
+  hspi.Instance = MOD_TO_BASE_SPI;
+  hspi.Init.Mode = SPI_MODE_SLAVE;
+  hspi.Init.Direction = SPI_DIRECTION_2LINES;
+  hspi.Init.DataSize = SPI_DATASIZE_8BIT;
+  hspi.Init.CLKPolarity = SPI_POLARITY_LOW;
+  hspi.Init.CLKPhase = SPI_PHASE_1EDGE;
+  hspi.Init.NSS = SPI_NSS_HARD_INPUT;
+  hspi.Init.FirstBit = SPI_FIRSTBIT_MSB;
+  hspi.Init.TIMode = SPI_TIMODE_DISABLED;
+  hspi.Init.CRCCalculation = SPI_CRCCALCULATION_ENABLED;
+  hspi.Init.CRCPolynomial = 0x8005;
+  hspi.Init.CRCLength = SPI_CRC_LENGTH_16BIT;
+  hspi.Init.NSSPMode = SPI_NSS_PULSE_DISABLED;
+  HAL_SPI_Init(&hspi);
+
+}
+
+/**
+  * Enable DMA controller clock
+  */
+void MX_DMA_Init(void)
+{
+  /* DMA controller clock enable */
+  __HAL_RCC_DMA1_CLK_ENABLE();
+
+  /* DMA interrupt init */
+  HAL_NVIC_SetPriority(DMA1_Channel4_IRQn, 0, 0);
+  HAL_NVIC_EnableIRQ(DMA1_Channel4_IRQn);
+  HAL_NVIC_SetPriority(DMA1_Channel5_IRQn, 0, 0);
+  HAL_NVIC_EnableIRQ(DMA1_Channel5_IRQn);
 
 }
 
@@ -341,19 +506,33 @@ void MX_GPIO_Init(void)
   GPIO_InitTypeDef GPIO_InitStruct;
 
   /* GPIO Ports Clock Enable */
-  __GPIOB_CLK_ENABLE();
+  mods_gpio_clk_enable();
 
-  /*Configure GPIO pin : PB9 - FORCE FLASH MODE */
-  GPIO_InitStruct.Pin = FORCE_FLASH_GPIO_PIN;
+  /*Configure GPIO pin : MUC_INT */
+  GPIO_InitStruct.Pin = GPIO_PIN_MUC_INT;
+  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Speed = GPIO_SPEED_HIGH;
+  HAL_GPIO_Init(GPIO_PORT_MUC_INT, &GPIO_InitStruct);
+
+ /*Configure GPIO pin : RDY/RFR */
+  GPIO_InitStruct.Pin = GPIO_PIN_RFR;
+  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Speed = GPIO_SPEED_HIGH;
+  HAL_GPIO_Init(GPIO_PORT_RFR, &GPIO_InitStruct);
+
+  mods_muc_int_set(PIN_RESET);
+  mods_rfr_set(PIN_RESET);
+
+  /*Configure GPIO pin : WAKE_N (input) */
+  GPIO_InitStruct.Pin = GPIO_PIN_WAKE_N;
   GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
-  HAL_GPIO_Init(FORCE_FLASH_GPIO_PORT, &GPIO_InitStruct);
+  HAL_GPIO_Init(GPIO_PORT_WAKE_N, &GPIO_InitStruct);
 
+  device_gpio_init();
 }
-
-/* USER CODE BEGIN 4 */
-
-/* USER CODE END 4 */
 
 #ifdef USE_FULL_ASSERT
 
@@ -371,16 +550,10 @@ void assert_failed(uint8_t* file, uint32_t line)
     ex: printf("Wrong parameters value: file %s on line %d\r\n", file, line) */
   /* USER CODE END 6 */
 
+  while (1)
+  {
+  }
 }
-
 #endif
-
-/**
-  * @}
-  */ 
-
-/**
-  * @}
-*/ 
 
 /************************ (C) COPYRIGHT STMicroelectronics *****END OF FILE****/

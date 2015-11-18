@@ -1,0 +1,39 @@
+#! /bin/bash
+
+if [ "$1" != "" ]
+then
+	CONFIG_CHIP=$1
+else
+	echo "ERROR - argument missing, need ./configure <mod-name>/<p-version>."
+	exit 2
+fi
+
+echo "Configuring for mod "${CONFIG_CHIP}
+DEFCONFIG=configs/${CONFIG_CHIP}/defconfig
+if test ! -f ${DEFCONFIG}
+then
+	echo "ERROR - invalid mod name \""${CONFIG_CHIP}"\" to be configured"
+	echo "Valid chip names currently supported are:"
+	for chip in `ls configs/`
+	do
+		if test -f configs/${chip}/p0/defconfig
+		then
+			echo "	${chip}/p0"
+		fi
+		if test -f configs/${chip}/p1/defconfig
+		then
+			echo "	${chip}/p1"
+		fi
+		if test -f configs/${chip}/p2/defconfig
+		then
+			echo "	${chip}/p2"
+		fi
+		if test -f configs/${chip}/p3/defconfig
+		then
+			echo "	${chip}/p3"
+		fi
+	done
+	exit 1
+fi
+
+cp ${DEFCONFIG} .config

@@ -1,7 +1,7 @@
 /**
   ******************************************************************************
-  * @file    stm32l4xx_it.c
-  * @brief   Interrupt Service Routines.
+  * @file    stm32l4xx_it.h
+  * @brief   This file contains the headers of the interrupt handlers.
   ******************************************************************************
   *
   * COPYRIGHT(c) 2015 STMicroelectronics
@@ -30,59 +30,29 @@
   *
   ******************************************************************************
   */
+
+/* Define to prevent recursive inclusion -------------------------------------*/
+#ifndef __STM32L4xx_IT_H
+#define __STM32L4xx_IT_H
+
+#ifdef __cplusplus
+ extern "C" {
+#endif
+
 /* Includes ------------------------------------------------------------------*/
-#include "stm32l4xx_hal.h"
-#include "stm32l4xx.h"
-#include "stm32l4xx_it.h"
+/* Exported types ------------------------------------------------------------*/
+/* Exported constants --------------------------------------------------------*/
+/* Exported macro ------------------------------------------------------------*/
+/* Exported functions ------------------------------------------------------- */
 
-
-/* External variables --------------------------------------------------------*/
-extern DMA_HandleTypeDef hdma_spi2_rx;
-extern DMA_HandleTypeDef hdma_spi2_tx;
-
-/******************************************************************************/
-/*            Cortex-M4 Processor Interruption and Exception Handlers         */
-/******************************************************************************/
-
-/**
-* @brief This function handles System tick timer.
-*/
-void SysTick_Handler(void)
-{
-  HAL_IncTick();
-  HAL_SYSTICK_IRQHandler();
+void SysTick_Handler(void);
+void DMA1_Channel2_IRQHandler(void);
+void DMA1_Channel3_IRQHandler(void);
+void EXTI15_10_IRQHandler(void);
+#ifdef __cplusplus
 }
+#endif
 
-/******************************************************************************/
-/* STM32L4xx Peripheral Interrupt Handlers                                    */
-/* Add here the Interrupt Handlers for the used peripherals.                  */
-/* For the available peripheral interrupt handler names,                      */
-/* please refer to the startup file (startup_stm32l4xx.s).                    */
-/******************************************************************************/
+#endif /* __STM32L4xx_IT_H */
 
-/**
-* @brief This function handles DMA1 channel4 global interrupt.
-*/
-void DMA1_Channel4_IRQHandler(void)
-{
-  HAL_DMA_IRQHandler(&hdma_spi2_rx);
-}
-
-/**
-* @brief This function handles DMA1 channel5 global interrupt.
-*/
-void DMA1_Channel5_IRQHandler(void)
-{
-  HAL_DMA_IRQHandler(&hdma_spi2_tx);
-}
-
-/**
-  * @brief  This function handles EXTI15_10 interrupt request.
-  * @param  None
-  * @retval None
-  */
-void EXTI15_10_IRQHandler (void)
-{
-  HAL_GPIO_EXTI_IRQHandler(GPIO_PIN_12);
-}
 /************************ (C) COPYRIGHT STMicroelectronics *****END OF FILE****/

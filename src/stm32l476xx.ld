@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2015 Motorola Mobility, LLC.
+ * Copyright (c) 2015-2016 Motorola Mobility, LLC.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -27,24 +27,32 @@
  */
 OUTPUT_FORMAT("elf32-littlearm")
 OUTPUT_ARCH(arm)
-ENTRY(Reset_Handler)
+ENTRY(_Start)
 
 MEMORY {
-    flash (rx) : ORIGIN = 0x08000000, LENGTH = 1024K
-    sram (rwx) : ORIGIN = 0x20000000, LENGTH = 96K
+    flash (rx) : ORIGIN = 0x08000000, LENGTH = 32K
+    sram (rwx) : ORIGIN = 0x20000000, LENGTH = 48K  /* Leave 16K for dmesg */
 }
 
-_estack = 0x20017fff; 
+_estack = 0x2000bfff;                     /* 48K of usable RAM after dmesg */
 
 SECTIONS {
+    . = ALIGN(4);
+    .flash_vector : {
+        KEEP(*(.flash_vector))
+        KEEP(*(.text._Start))
+    } > flash
+
     /*
      *  ISR
      */
     . = ALIGN(4);
+    _sf_isrv = LOADADDR(.reset);
     .reset : {
+        _sr_isrv = .;
         KEEP(*(.isr_vector))
         . = ALIGN(4);
-    } > flash
+    } > sram AT > flash
 
     /*
      *  TEXT
@@ -75,13 +83,13 @@ SECTIONS {
         KEEP (*(.init))
         KEEP (*(.fini))
         . = ALIGN(4);
-    } > flash
+    } > sram AT > flash
 
     . = ALIGN(4);
     .ARM.extab : {
         *(.ARM.extab*)
         . = ALIGN(4);
-    } > flash
+    } > sram AT > flash
 
     . = ALIGN(4);
     .ARM.exidx : {
@@ -89,7 +97,7 @@ SECTIONS {
         *(.ARM.exidx*)
         __exidx_end = ABSOLUTE(.);
         . = ALIGN(4);
-    } > flash
+    } > sram AT > flash
 
     /*
      *  DATA

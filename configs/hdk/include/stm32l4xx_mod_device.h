@@ -36,7 +36,7 @@
 #include <stdint.h>
 #include <greybus.h>
 
-#define BOARD_REVISION      (CONFIG_ARCH_BOARDID_PID & 0x0000FFFF)
+#define BOARD_REVISION      (MOD_BOARDID_PID & 0x0000FFFF)
 
 #define GPIO_PORT_WAKE_N     GPIOB
 #define GPIO_PIN_WAKE_N      GPIO_PIN_1
@@ -62,7 +62,7 @@ typedef enum
 {
   PIN_RESET = 0,
   PIN_SET
-}PinState;
+} PinState;
 
 static inline void mods_gpio_clk_enable(void)
 {

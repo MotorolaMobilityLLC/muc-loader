@@ -5,6 +5,7 @@
   ******************************************************************************
   *
   * COPYRIGHT(c) 2015 STMicroelectronics
+  * COPYRIGHT(c) 2015 Motorola, LLC.
   *
   * Redistribution and use in source and binary forms, with or without modification,
   * are permitted provided that the following conditions are met:
@@ -191,7 +192,7 @@ void setup_exchange(void)
     }
 
     /* Wait for WAKE_N to arm DMA */
-    if(mods_wake_n_get() == PIN_SET) {
+    if (mods_wake_n_get() == PIN_SET) {
       return;
     }
 
@@ -203,7 +204,8 @@ void setup_exchange(void)
     else
       buf_size = negotiated_pl_size + DL_HEADER_BITS_SIZE;
 
-    if(HAL_SPI_TransmitReceive_DMA(&hspi, (uint8_t*)aTxBuffer, (uint8_t *)aRxBuffer, buf_size) != HAL_OK) {
+    if (HAL_SPI_TransmitReceive_DMA(&hspi, (uint8_t*)aTxBuffer,
+                                    (uint8_t *)aRxBuffer, buf_size) != HAL_OK) {
       /* Transfer error in transmission process */
       Error_Handler();
     }
@@ -232,6 +234,12 @@ int main(void)
   default:
     break;
   }
+
+#ifdef CONFIG_NO_FLASH
+  /* fallback to booting to flash loader */
+  dbgprint("\r\nFLASHING\r\n");
+  Boot2Partition(FLASH_LOADER_INDEX);
+#endif
 
   /* USER CODE END 1 */
 
@@ -330,11 +338,11 @@ static int process_network_msg(struct mods_spi_msg *spi_msg)
 {
   struct mods_spi_msg *dl = spi_msg;
 
-  if(spi_msg->hdr_bits & HDR_BIT_VALID) {
-    if((spi_msg->hdr_bits & HDR_BIT_TYPE) == MSG_TYPE_NW ) {
+  if (spi_msg->hdr_bits & HDR_BIT_VALID) {
+    if ((spi_msg->hdr_bits & HDR_BIT_TYPE) == MSG_TYPE_NW ) {
       /* Process mods message */
       process_mods_msg(&spi_msg->m_msg);
-    } else if((spi_msg->hdr_bits & HDR_BIT_TYPE) == MSG_TYPE_DL ) {
+    } else if ((spi_msg->hdr_bits & HDR_BIT_TYPE) == MSG_TYPE_DL ) {
       process_mods_dl_msg(&dl->dl_msg);
     } else {
       return 0;
@@ -555,5 +563,3 @@ void assert_failed(uint8_t* file, uint32_t line)
   }
 }
 #endif
-
-/************************ (C) COPYRIGHT STMicroelectronics *****END OF FILE****/

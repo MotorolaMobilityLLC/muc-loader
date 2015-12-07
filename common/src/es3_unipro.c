@@ -64,7 +64,7 @@ int chip_unipro_receive(unsigned int cportid, unipro_rx_handler handler) {
         if(0 != handler(cportid,
                         spi_msg->m_msg.gb_op_hdr,
                         negotiated_pl_size - NW_HEADER_SIZE)) {
-            dbgprint("RX handler returned error\n");
+            dbgprint("RX handler returned error\r\n");
             return -1;
         }
     }

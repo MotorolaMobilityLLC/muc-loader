@@ -41,6 +41,7 @@
 
 extern uint8_t responded_op;
 extern int cport_connected;
+
 extern int fw_cport_handler(uint32_t cportid, void *data, size_t len);
 extern int gbfw_firmware_size(uint8_t stage, uint32_t *size);
 
@@ -102,17 +103,19 @@ int process_mods_dl_msg(struct dl_payload_msg *dl_msg)
         dbgprint("NO DL HNDL\r\n");
     }
     return rc;
-}int process_mods_msg(struct mods_msg *m_msg)
+}
+
+int process_mods_msg(struct mods_msg *m_msg)
 {
     int rc = 0;
 
     /* poll until data cport connected */
-    if(!manifest_fetched_by_ap() || (cport_connected == 0)) {
+    if (!manifest_fetched_by_ap() || (cport_connected == 0)) {
         protocol_type = control;
-        if(m_msg->cport == MODS_CONTROL_CPORT) {
+        if (m_msg->cport == MODS_CONTROL_CPORT) {
             rc = chip_unipro_receive(MODS_CONTROL_CPORT, mods_control_handler);
             if (rc == GB_FW_ERR_INVALID) {
-               dbgprint("Greybus init failed\n");
+               dbgprint("Greybus init failed\r\n");
                if (rc) {
                    goto protocol_error;
                }
@@ -120,17 +123,17 @@ int process_mods_dl_msg(struct dl_payload_msg *dl_msg)
         } else {
            rc = chip_unipro_receive(CONTROL_CPORT, control_cport_handler);
            if (rc == GB_FW_ERR_INVALID) {
-                dbgprint("Greybus init failed\n");
+                dbgprint("Greybus init failed\r\n");
                 if (rc) {
                     goto protocol_error;
                 }
            }
         }
-    } else if(responded_op != GB_FW_OP_READY_TO_BOOT ) {
+    } else if(responded_op != GB_FW_OP_READY_TO_BOOT) {
         protocol_type = firmware;
         rc = chip_unipro_receive(gbfw_cportid, fw_cport_handler);
         if (rc) {
-            dbgprint("Greybus FW CPort handler failed\n");
+            dbgprint("Greybus FW CPort handler failed\r\n");
             goto protocol_error;
         }
     } else {
@@ -148,17 +151,20 @@ int process_sent_complete(void)
 {
     int rc;
 
-    if(protocol_type == datalink) {
-        if(responded_op == DL_MUC_OP_BUS_CONFIG_RESP) {
+    if (protocol_type == datalink) {
+        dbgprint("protocol_type==datalink\r\n");
+        if (responded_op == DL_MUC_OP_BUS_CONFIG_RESP) {
             armDMAtype = full;
             negotiated_pl_size = payload.sel_payload_size;
             return 0;
         }
     }
 
-    if(protocol_type == firmware) {
-        if(responded_op == GB_FW_OP_READY_TO_BOOT) {
+    if (protocol_type == firmware) {
+        dbgprint("protocol_type==firmware\r\n");
+        if (responded_op == GB_FW_OP_READY_TO_BOOT) {
             /* Erase the Flash Mode Barker */
+            dbgprint("REBOOT\r\n");
             ErasePage((uint32_t)(FLASHMODE_FLAG_PAGE));
             armDMAtype = initial;
             HAL_NVIC_SystemReset();
@@ -166,9 +172,9 @@ int process_sent_complete(void)
         }
     }
 
-    if(responded_op != GB_FW_OP_AP_READY)
+    if (responded_op != GB_FW_OP_AP_READY)
         return 0;
-    if(mesg_sent == true)
+    if (mesg_sent == true)
         return 0;
 
     /* Fetch the firmware size. */

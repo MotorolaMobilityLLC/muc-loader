@@ -73,7 +73,7 @@ enum BootState {
 static const struct memory_map mmap[MMAP_PARTITION_NUM] = {
   {"nuttx", ((uint32_t)0x08008000), ((uint32_t)0x0807f800)},
   {0, 0, 0},
-  {0, 0, 0},
+  {"nuttx-flash", ((uint32_t)0x080E0000), ((uint32_t)0x080ff800)},
   {0, 0, 0},
 };
 

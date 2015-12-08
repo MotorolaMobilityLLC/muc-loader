@@ -186,7 +186,8 @@ typedef struct __SPI_HandleTypeDef
 #define HAL_SPI_ERROR_FRE    (uint32_t)0x00000008  /*!< FRE error                         */
 #define HAL_SPI_ERROR_DMA    (uint32_t)0x00000010  /*!< DMA transfer error                */
 #define HAL_SPI_ERROR_FLAG   (uint32_t)0x00000020  /*!< Error on BSY/TXE/FTLVL/FRLVL Flag */
-#define HAL_SPI_ERROR_UNKNOW (uint32_t)0x00000040  /*!< Unknown error                     */
+#define HAL_SPI_ERROR_RXNE   (uint32_t)0x00000040  /*!< RXNE error                        */
+#define HAL_SPI_ERROR_UNKNOW (uint32_t)0x00000080  /*!< Unknown error                     */
 /**
   * @}
   */

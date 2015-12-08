@@ -2000,7 +2000,7 @@ static void SPI_DMATransmitReceiveCplt(DMA_HandleTypeDef *hdma)
     if(hspi->Init.CRCCalculation == SPI_CRCCALCULATION_ENABLE)
     {
       if((hspi->Init.DataSize == SPI_DATASIZE_8BIT) && (hspi->Init.CRCLength == SPI_CRC_LENGTH_8BIT))
-      {
+      { 
         if(SPI_WaitFifoStateUntilTimeout(hspi, SPI_FLAG_FRLVL, SPI_FRLVL_QUARTER_FULL, SPI_DEFAULT_TIMEOUT) != HAL_OK)
         {
           /* Error on the CRC reception */
@@ -2026,7 +2026,7 @@ static void SPI_DMATransmitReceiveCplt(DMA_HandleTypeDef *hdma)
     {
       hspi->ErrorCode = HAL_SPI_ERROR_FLAG;
     }
-  
+
     /* Disable Rx/Tx DMA Request */
     CLEAR_BIT(hspi->Instance->CR2, SPI_CR2_TXDMAEN | SPI_CR2_RXDMAEN);
 
@@ -2039,6 +2039,12 @@ static void SPI_DMATransmitReceiveCplt(DMA_HandleTypeDef *hdma)
     {
       hspi->ErrorCode|= HAL_SPI_ERROR_CRC;
       __HAL_SPI_CLEAR_CRCERRFLAG(hspi);
+    }
+
+    /* For MODS this is an error */
+    if(__HAL_SPI_GET_FLAG(hspi, SPI_FLAG_RXNE) != RESET)
+    {
+      hspi->ErrorCode|= HAL_SPI_ERROR_RXNE;
     }
 
     if(hspi->ErrorCode != HAL_SPI_ERROR_NONE)

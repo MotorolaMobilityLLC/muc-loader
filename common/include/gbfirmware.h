@@ -53,8 +53,8 @@ extern uint32_t gbfw_cportid;
 #define GB_FW_ERR_FAILURE          (-2)
 
 /* Boot stage whose firmware we request */
-#define BOOT_STAGE                 2
-#define NEXT_BOOT_STAGE            (BOOT_STAGE + 1)
+#define GBFW_STAGE_MIN             0x01
+#define GBFW_STAGE_MAX             0x03
 
 /* Greybus FirmWare request and response payloads */
 struct __attribute__ ((__packed__)) gbfw_protocol_version_request {
@@ -76,6 +76,8 @@ struct __attribute__ ((__packed__)) gbfw_get_firmware_request {
 struct __attribute__ ((__packed__)) gbfw_ready_to_boot_request {
   uint8_t stage, status;
 };
+
+extern int gbfw_firmware_size(uint8_t stage);
 
 int greybus_cport_connect(void);
 int greybus_cport_disconnect(void);

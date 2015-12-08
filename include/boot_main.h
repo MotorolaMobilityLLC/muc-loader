@@ -46,8 +46,6 @@ extern bool armDMA;
 extern bool respReady;
 /* enum to indicate transport payload size type*/
 extern e_armDMAtype armDMAtype;
-/* enum to indicate type of gerybus protocol being processed */
-extern e_protocol_type protocol_type;
 /* negotiated transport payload size with base */
 extern uint16_t negotiated_pl_size;
 

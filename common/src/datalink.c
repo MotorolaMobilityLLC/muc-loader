@@ -43,13 +43,25 @@ extern uint8_t responded_op;
 extern int cport_connected;
 
 extern int fw_cport_handler(uint32_t cportid, void *data, size_t len);
-extern int gbfw_firmware_size(uint8_t stage, uint32_t *size);
 
 uint32_t agreed_pl_size = 0;
-static uint32_t firmware_size = 0;
 volatile uint8_t mesg_sent = false;
 
+typedef enum {
+    datalink,
+    control,
+    firmware
+} e_protocol_type;
+
+static e_protocol_type protocol_type = datalink;
+
+void dl_init(void)
+{
+  protocol_type = datalink;
+}
+
 struct dl_muc_bus_config_response payload = {24000000, MAX_NW_PL_SIZE};
+
 static int dl_bus_config(struct dl_payload_msg *dl_msg) {
     uint16_t recved_max_pl_size;
 
@@ -179,7 +191,7 @@ int process_sent_complete(void)
 
     /* Fetch the firmware size. */
     dbgprint("FWSIZE\r\n");
-    rc = gbfw_firmware_size(BOOT_STAGE, &firmware_size);
+    rc = gbfw_firmware_size(GBFW_STAGE_MIN);
     if (rc) {
         goto protocol_error;
     }

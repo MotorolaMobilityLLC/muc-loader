@@ -95,7 +95,6 @@ uint16_t negotiated_pl_size;
 /* USER CODE END PV */
 struct ring_buf *txp_rb;
 e_armDMAtype armDMAtype;
-e_protocol_type protocol_type;
 
 /* USER CODE BEGIN PV */
 /* Private variables ---------------------------------------------------------*/
@@ -258,7 +257,7 @@ int main(void)
   MX_SPI_Init();
   MX_USART_UART_Init();
 
-  dbgprint("\r\n--[MuC Loader]--\r\n");
+  dbgprint("\r\n--[MuC Loader v0.1]--\r\n");
   dbgprint("-Flash Mode\r\n");
 
   /* Config SPI NSS in interrupt mode */
@@ -267,7 +266,7 @@ int main(void)
   armDMA = true;
   respReady = false;
   armDMAtype = initial;
-  protocol_type = datalink;
+  dl_init();
   negotiated_pl_size = INITIAL_DMA_BUF_SIZE;
 
   while (1) {

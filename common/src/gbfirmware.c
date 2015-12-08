@@ -39,7 +39,6 @@
 #include "tftf.h"
 #include "stm32l4xx_flash.h"
 
-
 static bool tftf_header_received = false;
 static uint8_t tftf_buff[512];
 static uint16_t id_count = 1;
@@ -58,8 +57,11 @@ static struct fw_flash_data {
     int32_t fw_remaining_size;
     uint32_t new_payload_size;
 } fw_flash_data;
+
 extern uint32_t agreed_pl_size;
 uint8_t responded_op = GB_FW_OP_INVALID;
+
+static uint8_t _gbfw_stage = 0x00;  /* current flashing stage */
 
 int fw_cport_handler(uint32_t cportid, void *data, size_t len);
 static int gbfw_ready_to_boot(uint8_t status);
@@ -76,9 +78,12 @@ static int gbfw_ap_ready(uint32_t cportid, gb_operation_header *header) {
 
 static struct gbfw_firmware_size_response firmware_size_response;
 
-int gbfw_firmware_size(uint8_t stage, uint32_t *size) {
+int gbfw_firmware_size(uint8_t stage) {
     int rc;
     struct gbfw_firmware_size_request req = {stage};
+
+    _gbfw_stage = stage;
+
     rc = greybus_send_request(gbfw_cportid, id_count++, GB_FW_OP_FIRMWARE_SIZE,
                               (uint8_t*)&req, sizeof(req));
     if (rc) {
@@ -88,30 +93,54 @@ int gbfw_firmware_size(uint8_t stage, uint32_t *size) {
     return 0;
 }
 
+static void gbfw_next_stage(void) {
+    memset(&fw_flash_data, 0, sizeof(fw_flash_data));
+    tftf_header_received = false;
+
+    if (_gbfw_stage >= GBFW_STAGE_MIN && _gbfw_stage < GBFW_STAGE_MAX) {
+        gbfw_firmware_size(_gbfw_stage + 1);
+    } else {
+        gbfw_ready_to_boot(GB_FW_BOOT_STATUS_SECURE);
+    }
+}
+
+
 static int gbfw_firmware_size_response(gb_operation_header *head, void *data,
                                        uint32_t len) {
-    if(len < sizeof(struct gbfw_firmware_size_response)) {
-        dbgprint("gbfw_firmware_size_response: bad response size\n");
+    size_t fw_size;
+
+    if (head->status) {
+        gbfw_next_stage();
+        return 0;
+    }
+
+    responded_op = GB_FW_OP_FIRMWARE_SIZE;
+
+    if (len < sizeof(struct gbfw_firmware_size_response)) {
+        dbgprint("gbfw_firmware_size_response: bad response size\r\n");
         return GB_FW_ERR_INVALID;
     }
     memcpy(&firmware_size_response, data, sizeof(firmware_size_response));
 
-    dbgprinthex32(firmware_size_response.size);
-    dbgprinthex32(len);
-    dbgprint("FWGET\r\n");
+    fw_size = firmware_size_response.size;
+    dbgprinthex32(fw_size);
 
-    int rc;
-    struct gbfw_get_firmware_request req = {0, FW_TFTF_HEADER_SIZE};
-    rc = greybus_send_request(gbfw_cportid, id_count++, GB_FW_OP_GET_FIRMWARE,
-                              (uint8_t*)&req, sizeof(req));
-    if (rc) {
-        return rc;
+    if (fw_size > FW_TFTF_HEADER_SIZE) {
+        int rc;
+        struct gbfw_get_firmware_request req = {0, FW_TFTF_HEADER_SIZE};
+        rc = greybus_send_request(gbfw_cportid, id_count++, GB_FW_OP_GET_FIRMWARE,
+                                  (uint8_t*)&req, sizeof(req));
+        if (rc) {
+            return rc;
+        }
+        fw_flash_data.fw_request_size = FW_TFTF_HEADER_SIZE;
+    } else {
+        dbgprint("skip empty firmware");
+        gbfw_next_stage();
     }
-    fw_flash_data.fw_request_size = FW_TFTF_HEADER_SIZE;
 
     return 0;
 }
-
 
 static int gbfw_get_firmware(uint32_t offset, uint32_t size) {
     int rc;
@@ -163,7 +192,6 @@ static int gbfw_get_firmware_response(gb_operation_header *header, void *data,
         dbgprinthex32(flash_addr);
         dbgprint("\r\n");
 
-
         program_flash_data(flash_addr, flash_data_size, data_ptr);
 
         fw_flash_data.fw_offset += (fw_flash_data.fw_request_size - FW_TFTF_HEADER_SIZE);
@@ -189,7 +217,7 @@ static int gbfw_get_firmware_response(gb_operation_header *header, void *data,
         dbgprint("\r\n");
         dbgprint("PLSZ:");
         dbgprinthex32(flash_data_size);
-        dbgprint("\r\n\n");
+        dbgprint("\r\n");
 
         program_flash_data(flash_addr, flash_data_size, data_ptr);
 
@@ -217,31 +245,28 @@ static int gbfw_get_firmware_response(gb_operation_header *header, void *data,
         gbfw_get_firmware(fw_flash_data.fw_offset + FW_TFTF_HEADER_SIZE,
                           fw_flash_data.new_payload_size);
     } else {
-
-        /* Send REBOOT */
-        dbgprint("Reboot");
-        gbfw_ready_to_boot(GB_FW_BOOT_STATUS_SECURE);
-        responded_op = GB_FW_OP_READY_TO_BOOT;
+        gbfw_next_stage();
     }
     return 0;
 }
 
 static int gbfw_ready_to_boot(uint8_t status) {
     int rc;
-    struct gbfw_ready_to_boot_request req = {BOOT_STAGE, status};
+    struct gbfw_ready_to_boot_request req = {_gbfw_stage, status};
+
+    responded_op = GB_FW_OP_READY_TO_BOOT;
+
+    /* ready_to_boot currently doesn't respond so fake a response */
     rc = greybus_send_request(gbfw_cportid, id_count++, GB_FW_OP_READY_TO_BOOT,
                               (uint8_t*)&req, sizeof(req));
-    if (rc) {
-        return rc;
-    }
 
-    return 0;
+    return rc;
 }
 
 static int gbfw_ready_to_boot_response(gb_operation_header *header, void *data,
                                        uint32_t len) {
     if (header->status) {
-        dbgprint("gbfw_ready_to_boot_response(): got error status\n");
+        dbgprint("gbfw_ready_to_boot_response(): got error status\r\n");
         return -header->status;
     }
     return 0;
@@ -253,12 +278,12 @@ int fw_cport_handler(uint32_t cportid, void *data, size_t len) {
     uint8_t *data_ptr;
 
     if (cportid != gbfw_cportid) {
-        dbgprint("fw_cport_handler: incorrect CPort #");
+        dbgprint("fw_cport_handler: incorrect CPort #\r\n");
         return GB_FW_ERR_INVALID;
     }
 
     if (len < sizeof(gb_operation_header)) {
-        dbgprint("fw_cport_handler: RX data length error\n");
+        dbgprint("fw_cport_handler: RX data length error\r\n");
         return GB_FW_ERR_INVALID;
     }
 
@@ -266,13 +291,13 @@ int fw_cport_handler(uint32_t cportid, void *data, size_t len) {
     data_ptr = (uint8_t *)data;
 
     if(op_header->size > len) {
-        dbgprint("fw_cport_handler: nonsense message.\n");
+        dbgprint("fw_cport_handler: nonsense message.\r\n");
         return GB_FW_ERR_INVALID;
     }
+
     if (op_header->type & GB_TYPE_RESPONSE && op_header->status) {
         dbgprintx32("fw_cport_handler: Greybus response, status 0x",
-                   op_header->status, "\n");
-        return GB_FW_ERR_FAILURE;
+                   op_header->status, "\r\n");
     }
     /*
      * This works here because we're actually calling this handler
@@ -290,7 +315,6 @@ int fw_cport_handler(uint32_t cportid, void *data, size_t len) {
     case GB_FW_OP_FIRMWARE_SIZE | GB_TYPE_RESPONSE:
         dbgprint("FWSZRSP\r\n");
         rc = gbfw_firmware_size_response(op_header, data_ptr, len);
-        responded_op = GB_FW_OP_FIRMWARE_SIZE;
         break;
     case GB_FW_OP_GET_FIRMWARE | GB_TYPE_RESPONSE:
         dbgprint("GETFWRESP\r\n");
@@ -318,6 +342,7 @@ int fw_cport_handler(uint32_t cportid, void *data, size_t len) {
 }
 
 int cport_connected = 0, offset = -1;
+
 int greybus_cport_connect(void) {
     if (cport_connected == 1) {
         /* Don't know what to do if it is already connected */
@@ -335,5 +360,3 @@ int greybus_cport_disconnect(void) {
     }
     return 0;
 }
-
-

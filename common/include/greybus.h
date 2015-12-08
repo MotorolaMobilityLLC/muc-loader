@@ -147,7 +147,6 @@ int process_mods_msg(struct mods_msg *m_msg);
 int process_mods_dl_msg(struct dl_payload_msg *dl_msg);
 int greybus_processing(void);
 typedef enum {initial, full} e_armDMAtype;
-typedef enum {datalink, control, firmware} e_protocol_type;
 
 #define MAX_NW_PL_SIZE          2048 /* cport + GB header + DL payload */
 #define MAX_DMA_BUF_SIZE        MAX_NW_PL_SIZE + DL_HEADER_BITS_SIZE

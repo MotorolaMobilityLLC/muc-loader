@@ -33,7 +33,9 @@
 #define DL_MUC_OP_BUS_CONFIG        0x00
 #define DL_MUC_OP_BUS_CONFIG_RESP   0x80
 
-int process_sent_complete(void);
+extern int process_sent_complete(void);
+
+extern void dl_init(void);
 
 struct __attribute__ ((__packed__)) dl_muc_bus_config_request {
   uint16_t max_payload_size;

@@ -43,6 +43,7 @@
 #include "stm32l4xx_hal_uart.h"
 #include "stm32l4xx_flash.h"
 
+#include <stm32l4xx_mod_device.h>
 
 /* Private typedef -----------------------------------------------------------*/
 typedef void (*Function_Pointer)(void);
@@ -347,9 +348,12 @@ static int process_network_msg(struct mods_spi_msg *spi_msg)
     } else {
       return 0;
     }
-  } else {
+  } else if (respReady) {
+    /* we were sending a message so handle it */
     respReady = false;
     process_sent_complete();
+  } else {
+    dbgprint("UNEXPECTED MSG!!\r\n");
   }
   return 0;
 }
@@ -390,7 +394,17 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
   */
 void HAL_SPI_ErrorCallback(SPI_HandleTypeDef *hspi)
 {
+  dbgprint("ERR\r\n");
 
+  /* reset spi */
+  HAL_SPI_DeInit(&hspi);
+  dbgprint("DeInit called\r\n");
+  mod_dev_base_spi_reset();
+  MX_SPI_Init();
+  dbgprint("Re-Init\r\n");
+  memset(aTxBuffer, 0, MAX_DMA_BUF_SIZE);
+  memset(aRxBuffer, 0, MAX_DMA_BUF_SIZE);
+  armDMA = true;
 }
 
 /**
@@ -400,9 +414,8 @@ void HAL_SPI_ErrorCallback(SPI_HandleTypeDef *hspi)
   */
 static void Error_Handler(void)
 {
-  while(1)
-  {
-  }
+  dbgprint("FTL\r\n");
+  HAL_NVIC_SystemReset();
 }
 
 /** System Clock Configuration
@@ -467,7 +480,6 @@ void MX_USART_UART_Init(void)
 /* SPI init function */
 void MX_SPI_Init(void)
 {
-
   hspi.Instance = MOD_TO_BASE_SPI;
   hspi.Init.Mode = SPI_MODE_SLAVE;
   hspi.Init.Direction = SPI_DIRECTION_2LINES;
@@ -481,6 +493,7 @@ void MX_SPI_Init(void)
   hspi.Init.CRCPolynomial = 0x8005;
   hspi.Init.CRCLength = SPI_CRC_LENGTH_16BIT;
   hspi.Init.NSSPMode = SPI_NSS_PULSE_DISABLED;
+
   HAL_SPI_Init(&hspi);
 
 }
@@ -558,8 +571,6 @@ void assert_failed(uint8_t* file, uint32_t line)
     ex: printf("Wrong parameters value: file %s on line %d\r\n", file, line) */
   /* USER CODE END 6 */
 
-  while (1)
-  {
-  }
+  HAL_NVIC_SystemReset();
 }
 #endif

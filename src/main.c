@@ -71,6 +71,14 @@ enum BootState {
     BOOT_STATE_FLASHING,      /* Flashing in progress  */
 };
 
+/* debug variable for why we went into flash */
+#define FLASH_REASON_BOOTMODE 1
+#define FLASH_REASON_FLASHING 2
+#define FLASH_REASON_FLASHPIN 3
+#define FLASH_REASON_BOOTFAIL 4
+
+static uint32_t flash_reason;
+
 static const struct memory_map mmap[MMAP_PARTITION_NUM] = {
   {"nuttx", ((uint32_t)0x08008000), ((uint32_t)0x0807f800)},
   {0, 0, 0},
@@ -161,16 +169,19 @@ enum BootState CheckFlashMode(void)
   bootModeFlag = (char *)(FLASHMODE_FLAG_PAGE);
   if (!memcmp(bootModeFlag, bootmode_flag, sizeof(bootmode_flag)))
   {
+    flash_reason = FLASH_REASON_BOOTMODE;
     bootState = BOOT_STATE_REQUEST_FLASH;
   }
 
   if (!memcmp(bootModeFlag, flashing_flag, sizeof(flashing_flag)))
   {
+    flash_reason = FLASH_REASON_FLASHING;
     bootState = BOOT_STATE_FLASHING;
   }
 
   if (mods_force_flash_get() == PIN_SET)
   {
+    flash_reason = FLASH_REASON_FLASHPIN;
     bootState = BOOT_STATE_REQUEST_FLASH;
   }
 
@@ -225,6 +236,7 @@ int main(void)
   switch(bootState) {
   case BOOT_STATE_NORMAL:
     Boot2Partition(BOOT_PARTITION_INDEX);
+    flash_reason = FLASH_REASON_BOOTFAIL;
   case BOOT_STATE_REQUEST_FLASH:
     /* Erase the Flash Mode Barker */
     ErasePage((uint32_t)(FLASHMODE_FLAG_PAGE));
@@ -257,8 +269,8 @@ int main(void)
   MX_SPI_Init();
   MX_USART_UART_Init();
 
-  dbgprint("\r\n--[MuC Loader v0.1]--\r\n");
-  dbgprint("-Flash Mode\r\n");
+  dbgprint("\r\n--[MuC Loader v0.3]--\r\n");
+  dbgprintx32("-Flash Mode (", flash_reason, ")\r\n");
 
   /* Config SPI NSS in interrupt mode */
   SPI_NSS_INT_CTRL_Config();

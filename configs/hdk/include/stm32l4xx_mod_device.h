@@ -93,4 +93,9 @@ static inline PinState mods_force_flash_get(void)
   return HAL_GPIO_ReadPin(GPIO_PORT_FORCE_FLASH, GPIO_PIN_FORCE_FLASH);
 }
 
+static inline void mod_dev_base_spi_reset(void)
+{
+  __HAL_RCC_SPI2_FORCE_RESET();
+  __HAL_RCC_SPI2_RELEASE_RESET();
+}
 #endif /* __STM32L4XX_MOD_DEVICE_H */

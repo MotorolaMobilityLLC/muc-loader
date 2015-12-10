@@ -53,28 +53,21 @@ typedef struct {
 #define GB_CTRL_OP_DISCONNECTED      0x06
 
 #define GB_OP_SUCCESS                0x00
+#define GB_OP_INTERRUPTED            0x01
+#define GB_OP_TIMEOUT                0x02
+#define GB_OP_NO_MEMORY              0x03
+#define GB_OP_PROTOCOL_BAD           0x04
+#define GB_OP_OVERFLOW               0x05
 #define GB_OP_INVALID                0x06
+#define GB_OP_RETRY                  0x07
+#define GB_OP_NONEXISTENT            0x08
 #define GB_OP_UNKNOWN_ERROR          0xFE
+#define GB_OP_INTERNAL               0xff
 
 #define GB_MAX_PAYLOAD_SIZE          (0x800 - 2*sizeof(gb_operation_header))
 
 #define CONTROL_CPORT 0
-
 #define MODS_CONTROL_CPORT 0xFFFF
-
-/* Version of the Greybus control protocol we support */
-#define MB_CONTROL_VERSION_MAJOR              0x00
-#define MB_CONTROL_VERSION_MINOR              0x01
-
-/* Greybus control request types */
-#define MB_CONTROL_TYPE_INVALID               0x00
-#define MB_CONTROL_TYPE_PROTOCOL_VERSION      0x01
-#define MB_CONTROL_TYPE_GET_IDS               0x02
-#define MB_CONTROL_TYPE_REBOOT                0x03
-
-/* Valid modes for the reboot request */
-#define MB_CONTROL_REBOOT_MODE_RESET          0x01
-#define MB_CONTROL_REBOOT_MODE_BOOTLOADER     0x02
 
 #define HDR_BIT_VALID  (0x01 << 7)  /* 1 = valid packet, 0 = dummy packet */
 #define HDR_BIT_TYPE   (0x01 << 6)  /* SPI message type, datalink or network */
@@ -106,17 +99,6 @@ struct __attribute__ ((packed))mods_spi_msg
         struct  mods_msg m_msg;
         struct  dl_payload_msg dl_msg;
     };
-};
-
-/* Control protocol get_ids request has no payload */
-struct __attribute__ ((packed)) gb_control_get_ids_response {
-    uint32_t    unipro_mfg_id;
-    uint32_t    unipro_prod_id;
-    uint32_t    ara_vend_id;
-    uint32_t    ara_prod_id;
-    uint64_t    uid_low;
-    uint64_t    uid_high;
-    uint32_t    fw_version;
 };
 
 int control_cport_handler(uint32_t cportid,

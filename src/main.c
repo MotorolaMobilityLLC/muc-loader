@@ -193,12 +193,17 @@ void setup_exchange(void)
 {
   uint32_t buf_size;
 
+  if (!mod_dev_is_attached()) {
+    dbgprint("Detached\r\n");
+    HAL_NVIC_SystemReset();
+  }
+
   /* Start the Full Duplex Communication process */
   /* While the SPI in TransmitReceive process, user can transmit data through
      "aTxBuffer" buffer & receive data through "aRxBuffer" */
   if (armDMA == true) {
     /* Response is ready, signal INT to base */
-    if(respReady == true) {
+    if (respReady == true) {
        mods_muc_int_set(PIN_SET);
     }
 

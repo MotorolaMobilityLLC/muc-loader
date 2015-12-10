@@ -111,7 +111,7 @@ LDFLAGS   += --specs=rdimon.specs -lc -lrdimon
 OBJS    = $(addprefix $(OUT_DIR)/,$(CSRCS:.c=.o)) $(addprefix $(OUT_DIR)/,$(SSRCS:.s=.o))
 DEPS    = $(addprefix $(DEP_DIR)/,$(CSRCS:.c=.d)) $(addprefix $(OUT_DIR)/,$(SSRCS:.s=.d))
 
-$(OUT_DIR)/%.o : %.c $(DEP_DIR) $(OUT_DIR)
+$(OUT_DIR)/%.o : %.c $(DEP_DIR) $(OUT_DIR) include/version.h
 	@echo "CC:      $(notdir $<)"
 	$(CC) $(CFLAGS) -c -o $@ $< -MMD -MF $(DEP_DIR)/$(*F).d
 
@@ -120,6 +120,29 @@ $(OUT_DIR)/%.o : %.s $(DEP_DIR) $(OUT_DIR)
 	$(CC) $(CFLAGS) -c -o $@ $< -MMD -MF $(DEP_DIR)/$(*F).d
 
 all:  $(OUT_DIR)/$(TARGET).bin $(OUT_DIR)/$(TARGET).hex $(OUT_DIR)/$(TARGET).lst
+
+.PHONY: FORCE
+
+ifeq (${INCREMENTAL_RELEASE_NUMBER},)
+  OVERRIDE_VERSION = 0.1
+else
+  OVERRIDE_VERSION = 0.${INCREMENTAL_RELEASE_NUMBER}
+endif
+
+ifeq (${INCREMENTAL_BUILD_NUMBER},)
+  OVERRIDE_BUILD_NUM = 5
+else
+  OVERRIDE_BUILD_NUM = ${INCREMENTAL_BUILD_NUMBER}
+endif
+
+.version: FORCE
+	./tools/version.sh -v $(OVERRIDE_VERSION) -b $(OVERRIDE_BUILD_NUM) $@
+
+include/version.h: .version
+	@echo "#ifndef __VERSION_H__"       > $@
+	@echo "#define __VERSION_H__"      >> $@
+	grep CONFIG_VERSION .version | sed 's/^/\#define /' | sed 's/=/ /'  >> $@
+	@echo "#endif /* __VERSION_H__ */" >> $@
 
 $(DEP_DIR) $(OUT_DIR):
 	@echo "MKDIR:   $@"; mkdir -p $@

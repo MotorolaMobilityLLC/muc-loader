@@ -37,6 +37,7 @@
 #include <stdbool.h>
 #include <debug.h>
 #include <greybus.h>
+#include <version.h>
 #include "datalink.h"
 #include "stm32l4xx_hal.h"
 #include "stm32l4xx_hal_mod.h"
@@ -274,7 +275,7 @@ int main(void)
   MX_SPI_Init();
   MX_USART_UART_Init();
 
-  dbgprint("\r\n--[MuC Loader v0.3]--\r\n");
+  dbgprint("\r\n--[MuC Loader v" CONFIG_VERSION_STRING ":" CONFIG_VERSION_BUILD "]\r\n");
   dbgprintx32("-Flash Mode (", flash_reason, ")\r\n");
 
   /* Config SPI NSS in interrupt mode */

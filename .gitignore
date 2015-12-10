@@ -10,3 +10,5 @@
 *.a
 *.*.swp
 *.*.bk
+include/version.h
+.version

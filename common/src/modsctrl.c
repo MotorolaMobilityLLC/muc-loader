@@ -34,6 +34,8 @@
 #include "greybus.h"
 #include "gbfirmware.h"
 
+#include <version.h>
+
 /* Version of the Greybus control protocol we support */
 #define MB_CONTROL_VERSION_MAJOR              0x00
 #define MB_CONTROL_VERSION_MINOR              0x02
@@ -108,7 +110,7 @@ static int modsctrl_get_ids(uint32_t cportid,
 {
     struct mb_control_get_ids_response get_ids_resp;
 
-    get_ids_resp.fw_version = MOD_BOOT_VERSION;
+    get_ids_resp.fw_version = (CONFIG_VERSION_MAJOR << 16 | CONFIG_VERSION_MINOR);
     get_chip_id(&get_ids_resp.unipro_mfg_id, &get_ids_resp.unipro_prod_id);
     get_board_id(&get_ids_resp.ara_vend_id, &get_ids_resp.ara_prod_id);
     get_chip_uid(&get_ids_resp.uid_high, &get_ids_resp.uid_low);

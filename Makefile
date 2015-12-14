@@ -70,6 +70,7 @@ CSRCS      += stm32l4xx_flash.c
 CSRCS      += debug.c \
 	      utils.c \
 	      gbcore.c \
+	      ctrl.c \
 	      modsctrl.c \
 	      gbfirmware.c \
 	      datalink.c \

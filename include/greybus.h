@@ -127,10 +127,6 @@ int greybus_send_request(uint32_t cport,
                          uint8_t type,
                          unsigned char *payload_data,
                          uint16_t payload_size);
-int dl_send_message(uint8_t id,
-                                uint8_t status,
-                                unsigned char *payload_data,
-                                uint16_t payload_size);
 bool manifest_fetched_by_ap(void);
 int process_mods_msg(struct mods_msg *m_msg);
 int process_mods_dl_msg(struct dl_payload_msg *dl_msg);

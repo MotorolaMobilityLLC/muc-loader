@@ -41,7 +41,6 @@
 
 extern uint8_t responded_op;
 extern int cport_connected;
-
 extern int fw_cport_handler(uint32_t cportid, void *data, size_t len);
 
 uint32_t agreed_pl_size = 0;
@@ -58,6 +57,33 @@ static e_protocol_type protocol_type = datalink;
 void dl_init(void)
 {
   protocol_type = datalink;
+}
+
+static int dl_send_message(uint8_t id,
+                           uint8_t status,
+                           unsigned char *payload_data,
+                           uint16_t payload_size) {
+    /**
+     * the payload_size are all pretty small for Greybus Control protocol
+     * and the firmware downloading protocol on the boot ROM side.
+     * So we can use the variable sized array here and not worrying
+     * about running out of stack space
+     */
+    struct mods_spi_msg *spi_msg = (struct mods_spi_msg *)&aTxBuffer[0];
+    unsigned char *payload = &spi_msg->dl_msg.dl_pl[0];
+
+    spi_msg->dl_msg.mesg_id = id | status;
+
+    if (payload_size != 0 && payload_data != NULL) {
+        memcpy(payload, payload_data, payload_size);
+    }
+
+    spi_msg->hdr_bits = MSG_TYPE_DL;
+    spi_msg->hdr_bits |= HDR_BIT_VALID;
+
+    respReady = true;
+
+    return 0;
 }
 
 struct dl_muc_bus_config_response payload = {24000000, MAX_NW_PL_SIZE};
@@ -103,7 +129,6 @@ int dl_muc_handler(struct dl_payload_msg *dl_msg) {
     return rc;
 }
 
-
 int process_mods_dl_msg(struct dl_payload_msg *dl_msg)
 {
     int rc = 0;
@@ -117,6 +142,7 @@ int process_mods_dl_msg(struct dl_payload_msg *dl_msg)
     return rc;
 }
 
+/* TODO: switch should be part of greybus core */
 int process_mods_msg(struct mods_msg *m_msg)
 {
     int rc = 0;

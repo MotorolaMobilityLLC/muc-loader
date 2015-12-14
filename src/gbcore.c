@@ -62,33 +62,6 @@ static int greybus_send_message(uint32_t cport,
     return chip_unipro_send(cport, spi_msg, sizeof(spi_msg));
 }
 
-int dl_send_message(uint8_t id,
-                                uint8_t status,
-                                unsigned char *payload_data,
-                                uint16_t payload_size) {
-    /**
-     * the payload_size are all pretty small for Greybus Control protocol
-     * and the firmware downloading protocol on the boot ROM side.
-     * So we can use the variable sized array here and not worrying
-     * about running out of stack space
-     */
-    struct mods_spi_msg *spi_msg = (struct mods_spi_msg *)&aTxBuffer[0];
-    unsigned char *payload = &spi_msg->dl_msg.dl_pl[0];
-
-    spi_msg->dl_msg.mesg_id = id | status;
-
-    if (payload_size != 0 && payload_data != NULL) {
-        memcpy(payload, payload_data, payload_size);
-    }
-
-    spi_msg->hdr_bits = MSG_TYPE_DL;
-    spi_msg->hdr_bits |= HDR_BIT_VALID;
-
-    respReady = true;
-
-    return 0;
-}
-
 int greybus_send_request(uint32_t cport,
                          uint16_t id,
                          uint8_t type,

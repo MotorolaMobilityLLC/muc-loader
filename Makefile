@@ -5,7 +5,6 @@ OUT_DIR      = out
 DEP_DIR      = dep
 INC_DIR      = include
 SRC_DIR      = src
-COM_DIR      = common
 CFG_DIR      = configs
 
 CHIPSET          = STM32L4xx
@@ -52,7 +51,6 @@ INCS       = -I$(HAL_DIR)/Inc/
 INCS      += -I$(CFG_DIR)/$(CONFIG_MOD_TYPE)/$(INC_DIR)/
 INCS      += -I.
 INCS      += -I$(INC_DIR)/
-INCS      += -I$(COM_DIR)/$(INC_DIR)/
 INCS      += -I$(CMSIS_DIR)/Include/
 INCS      += -I$(CMSIS_DIR)/Device/ST/$(CHIPSET)/Include
 INCS      += -I$(SRC_DIR)/
@@ -94,7 +92,6 @@ CSRCS      += $(CHIPSET_LC)_hal_rcc.c \
 SSRCS       = startup_stm32l476xx.s
 
 VPATH      = ./src
-VPATH     += $(COM_DIR)/src
 VPATH     += $(HAL_DIR)/Src
 VPATH     += $(DEV_DIR)/Source/
 

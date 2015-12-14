@@ -40,6 +40,8 @@
 #include "stm32l4xx_hal_mod.h"
 #include "stm32l4xx_hal_uart.h"
 
+#include <stm32l4xx_flash.h>
+
 /* Private function prototypes -----------------------------------------------*/
 static uint32_t GetPage(uint32_t Address);
 static uint32_t GetBank(uint32_t Address);
@@ -116,6 +118,23 @@ int flash_erase(uint32_t start_addr, uint32_t size)
   return 0;
 }
 
+int program_flash_unlock(void)
+{
+    HAL_FLASH_Unlock();
+}
+
+int program_flash_lock(void)
+{
+    HAL_FLASH_Lock();
+}
+
+int program_flash_dword(const uint64_t *dword)
+{
+    int rv;
+    dbgprintx32("program_flash_dword ", FLASHMODE_FLAG_PAGE, "\r\n");
+    rv = HAL_FLASH_Program(FLASH_TYPEPROGRAM_DOUBLEWORD, FLASHMODE_FLAG_PAGE, *dword);
+    return rv;
+}
 
 int program_flash_data(uint32_t start, uint32_t size, uint8_t *data)
 {

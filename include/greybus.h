@@ -35,13 +35,20 @@
 #define GREYBUS_MAJOR_VERSION        0
 #define GREYBUS_MINOR_VERSION        1
 
-typedef struct {
+struct gb_operation_hdr {
     uint16_t size;
     uint16_t id;
     uint8_t  type;
     uint8_t  status;
     uint16_t padding;
-} __attribute__ ((packed)) gb_operation_header;
+} __attribute__ ((packed));
+
+typedef struct gb_operation_hdr gb_operation_header;
+
+struct gb_operation_msg {
+    struct gb_operation_hdr hdr;
+    uint8_t data[0];
+};
 
 #define GB_TYPE_RESPONSE  0x80
 

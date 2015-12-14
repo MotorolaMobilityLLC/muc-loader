@@ -38,6 +38,7 @@
 #include <debug.h>
 #include <greybus.h>
 #include <version.h>
+#include <boot_main.h>
 #include "datalink.h"
 #include "stm32l4xx_hal.h"
 #include "stm32l4xx_hal_mod.h"
@@ -65,12 +66,6 @@ struct memory_map {
 /* Private variables ---------------------------------------------------------*/
 static const char bootmode_flag[8] =  {'B', 'O', 'O', 'T', 'M', 'O', 'D', 'E'};
 static const char flashing_flag[8] =  {'F', 'L', 'A', 'S', 'H', 'I', 'N', 'G'};
-
-enum BootState {
-    BOOT_STATE_NORMAL,        /* Boot main program */
-    BOOT_STATE_REQUEST_FLASH, /* Boot flashing program */
-    BOOT_STATE_FLASHING,      /* Flashing in progress  */
-};
 
 /* debug variable for why we went into flash */
 #define FLASH_REASON_BOOTMODE 1
@@ -350,6 +345,15 @@ int set_flashing_flag(void)
   } else {
     return 0;
   }
+}
+
+int set_request_flash(void)
+{
+  int rv;
+  program_flash_unlock();
+  rv = program_flash_dword((uint64_t *)&bootmode_flag[0]);
+  program_flash_lock();
+  return rv;
 }
 
 static int process_network_msg(struct mods_spi_msg *spi_msg)

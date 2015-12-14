@@ -34,6 +34,8 @@
 #include "greybus.h"
 #include "gbfirmware.h"
 
+#include "stm32l4xx_hal.h"
+
 #include <version.h>
 
 /* Version of the Greybus control protocol we support */
@@ -122,6 +124,32 @@ static int modsctrl_get_ids(uint32_t cportid,
                                sizeof(get_ids_resp));
 }
 
+static int modsctrl_reboot(uint32_t cportid,
+        struct gb_operation_msg *msg)
+{
+    int rv = GB_OP_SUCCESS;
+
+    struct mb_control_reboot_request *req =
+        (struct mb_control_reboot_request *)msg->data;
+
+    switch (req->mode) {
+        case MB_CONTROL_REBOOT_MODE_RESET:
+            dbgprint("REBOOT_RESET\r\n");
+        break;
+        case MB_CONTROL_REBOOT_MODE_BOOTLOADER:
+            dbgprint("REBOOT_BOOTLOADER\r\n");
+            if (CheckFlashMode() == BOOT_STATE_NORMAL) {
+                set_request_flash();
+            }
+        break;
+        default:
+            dbgprintx32("REBOOT ", req->mode, "\r\n");
+        break;
+    }
+    HAL_NVIC_SystemReset();
+    return rv;
+}
+
 static int modsctrl_unimplemented(uint32_t cportid,
         gb_operation_header *op_header)
 {
@@ -167,7 +195,8 @@ int mods_control_handler(uint32_t cportid,
         break;
     case MB_CONTROL_TYPE_REBOOT:
         dbgprint("MODCTRL:REBOOT\r\n");
-        rc = modsctrl_unimplemented(cportid, op_header);
+        rc = modsctrl_reboot(cportid,
+                (struct gb_operation_msg *)op_header);
         break;
     case MB_CONTROL_TYPE_PORT_CONNECTED:
         dbgprint("MODCTRL:CONNECTED\r\n");

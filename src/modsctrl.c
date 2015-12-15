@@ -153,11 +153,18 @@ static int modsctrl_reboot(uint32_t cportid,
 static int modsctrl_unimplemented(uint32_t cportid,
         gb_operation_header *op_header)
 {
-    return greybus_op_response(cportid,
+    int rv = GB_OP_SUCCESS;
+
+    dbgprintx32("unimplemented: ", op_header->id, "\r\n");
+    if (op_header->id) {
+        rv = greybus_op_response(cportid,
             op_header,
             GB_OP_INVALID,
             NULL,
             0);
+    }
+
+    return rv;
 }
 
 static int modsctrl_root_version(uint32_t cportid,

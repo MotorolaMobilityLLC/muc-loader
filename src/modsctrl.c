@@ -56,6 +56,17 @@
 #define MB_CONTROL_REBOOT_MODE_RESET          0x01
 #define MB_CONTROL_REBOOT_MODE_BOOTLOADER     0x02
 
+/* Valid modes for the slave power request */
+#define MB_CONTROL_SLAVE_POWER_ON             0x01
+#define MB_CONTROL_SLAVE_POWER_OFF            0x02
+#define MB_CONTROL_SLAVE_POWER_FLASH_MODE     0x03
+
+enum slave_pwrctrl_mode {
+    SLAVE_PWRCTRL_POWER_ON          = 0x01,
+    SLAVE_PWRCTRL_POWER_OFF         = 0x02,
+    SLAVE_PWRCTRL_POWER_FLASH_MODE  = 0x03,
+};
+
 /* Control protocol version request has no payload */
 struct mb_control_proto_version_response {
     uint8_t      major;
@@ -71,6 +82,7 @@ struct mb_control_get_ids_response {
     uint64_t    uid_low;
     uint64_t    uid_high;
     uint32_t    fw_version;
+    uint32_t    slave_mask;
 } __attribute__ ((packed));
 
 struct mb_control_reboot_request {
@@ -89,6 +101,7 @@ struct mb_control_power_ctrl_request {
     uint32_t    slave_id;
     uint8_t      mode;
 } __attribute__ ((packed));
+/* Control protocol slave power response has no payload */
 
 struct mb_control_root_ver_response {
     uint8_t      version;
@@ -116,6 +129,12 @@ static int modsctrl_get_ids(uint32_t cportid,
     get_chip_id(&get_ids_resp.unipro_mfg_id, &get_ids_resp.unipro_prod_id);
     get_board_id(&get_ids_resp.ara_vend_id, &get_ids_resp.ara_prod_id);
     get_chip_uid(&get_ids_resp.uid_high, &get_ids_resp.uid_low);
+#ifdef MOD_SLAVE_APBE
+    get_ids_resp.slave_mask = 1;
+    dbgprint("MODCTRL:SLAVE MASK SET\r\n");
+#else
+    get_ids_resp.slave_mask = 0;
+#endif
 
     return greybus_op_response(cportid,
                                op_header,
@@ -179,6 +198,22 @@ static int modsctrl_root_version(uint32_t cportid,
             sizeof(resp));
 }
 
+static int modsctrl_slave_power(uint32_t cportid,
+        struct gb_operation_msg *msg)
+{
+    int ret = 0;
+    struct mb_control_power_ctrl_request *req =
+        (struct mb_control_power_ctrl_request *)msg->data;
+
+#ifdef MOD_SLAVE_APBE
+    ret = slave_pwrctrl_set_mode(req->mode);
+#else
+    ret = modsctrl_unimplemented(cportid, (gb_operation_header *)msg);
+#endif
+
+    return ret ? GB_OP_UNKNOWN_ERROR : GB_OP_SUCCESS;
+}
+
 int mods_control_handler(uint32_t cportid,
                           void *data,
                           size_t len)
@@ -215,7 +250,7 @@ int mods_control_handler(uint32_t cportid,
         break;
     case MB_CONTROL_TYPE_SLAVE_POWER:
         dbgprint("MODCTRL:SLAVE_POWER\r\n");
-        rc = modsctrl_unimplemented(cportid, op_header);
+        rc = modsctrl_slave_power(cportid, (struct gb_operation_msg *)op_header);
         break;
     case MB_CONTROL_TYPE_ROOT_VERSION:
         dbgprint("MODCTRL:ROOT_VERSION\r\n");

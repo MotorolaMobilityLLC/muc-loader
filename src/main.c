@@ -578,8 +578,27 @@ void MX_GPIO_Init(void)
   device_gpio_init();
 }
 
-#ifdef USE_FULL_ASSERT
+#ifdef MOD_SLAVE_APBE
+int slave_pwrctrl_set_mode(enum slave_pwrctrl_mode mode)
+{
+    switch (mode) {
+    case SLAVE_PWRCTRL_POWER_ON:
+        dbgprint("POWER_ON\r\n");
+    case SLAVE_PWRCTRL_POWER_FLASH_MODE:
+        dbgprint("POWER_FLASH_MODE\r\n");
+        apbe_power_on_flash();
+        break;
+    case SLAVE_PWRCTRL_POWER_OFF:
+        dbgprint("POWER_OFF\r\n");
+    default:
+        apbe_power_off();
+        break;
+    }
+    return 0;
+}
+#endif
 
+#ifdef USE_FULL_ASSERT
 /**
    * @brief Reports the name of the source file and the source line number
    * where the assert_param error has occurred.

@@ -12,3 +12,6 @@
 *.*.bk
 include/version.h
 .version
+*~
+cscope.out
+.config

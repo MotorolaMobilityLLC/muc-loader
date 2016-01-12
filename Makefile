@@ -1,17 +1,19 @@
 TOPDIR := ${shell pwd}
 
-CUBE_DIR     = STM32Cube_FW_L4_V1.0.0
 OUT_DIR      = out
 DEP_DIR      = dep
 INC_DIR      = include
 SRC_DIR      = src
 CFG_DIR      = configs
 
-CHIPSET          = STM32L4xx
-CHIPSET_LC       = stm32l4xx
-TARGET_DEVICE    = STM32L476xx
-TARGET_DEVICE_LC = stm32l476xx
-BOARD            = STM32L476G-Discovery
+include $(TOPDIR)/.config
+
+CUBE_DIR         = $(CONFIG_CUBE_DIR)
+CHIPSET          = $(CONFIG_CHIPSET)
+CHIPSET_LC       = $(CONFIG_CHIPSET_LC)
+TARGET_DEVICE    = $(CONFIG_TARGET_DEVICE)
+TARGET_DEVICE_LC = $(CONFIG_TARGET_DEVICE_LC)
+BOARD            = $(CONFIG_BOARD)
 
 HAL_DIR      = $(CUBE_DIR)/Drivers/$(CHIPSET)_HAL_Driver
 CMSIS_DIR    = $(CUBE_DIR)/Drivers/CMSIS
@@ -28,8 +30,6 @@ SIZE       = $(PREFIX)-size
 DEFS       = -D$(TARGET_DEVICE)
 DEFS      += -DUSE_HAL_DRIVER
 DEFS      += -DUSE_DBPRINTF
-
-include $(TOPDIR)/.config
 
 ifeq ($(CONFIG_DEBUG),y)
 DEFS      += -D_DEBUG
@@ -57,15 +57,19 @@ INCS      += -I$(SRC_DIR)/
 
 CFLAGS     = -Wall -g -std=c99 -Os
 CFLAGS    += -mlittle-endian -mcpu=cortex-m4 -march=armv7e-m -mthumb
-CFLAGS    += -mfpu=fpv4-sp-d16 -mfloat-abi=hard
+ifeq ($(CONFIG_ARCH_HAS_HW_FLOAT),y)
+ CFLAGS    += -mfpu=fpv4-sp-d16 -mfloat-abi=hard
+else
+ CFLAGS    += -mfloat-abi=soft
+endif
 CFLAGS    += -ffunction-sections -fdata-sections
 CFLAGS    += $(INCS) $(DEFS)
 
 CSRCS       = main.c
-CSRCS      += system_stm32l4xx.c
-CSRCS      += stm32l4xx_hal_msp.c
-CSRCS      += stm32l4xx_it.c
-CSRCS      += stm32l4xx_flash.c
+CSRCS      += system_$(CHIPSET_LC).c
+CSRCS      += $(CHIPSET_LC)_hal_msp.c
+CSRCS      += $(CHIPSET_LC)_it.c
+CSRCS      += $(CHIPSET_LC)_flash.c
 
 CSRCS      += debug.c \
 	      utils.c \
@@ -90,7 +94,7 @@ CSRCS      += $(CHIPSET_LC)_hal_rcc.c \
               $(CHIPSET_LC)_hal_uart_ex.c \
               $(CHIPSET_LC)_hal_pwr_ex.c
 
-SSRCS       = startup_stm32l476xx.s
+SSRCS       = startup_$(TARGET_DEVICE_LC).s
 
 VPATH      = ./src
 VPATH     += $(HAL_DIR)/Src

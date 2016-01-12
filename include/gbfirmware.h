@@ -74,7 +74,7 @@ struct __attribute__ ((__packed__)) gbfw_get_firmware_request {
 };
 
 struct __attribute__ ((__packed__)) gbfw_ready_to_boot_request {
-  uint8_t stage, status;
+  uint8_t status;
 };
 
 extern int gbfw_firmware_size(uint8_t stage);

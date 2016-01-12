@@ -46,6 +46,9 @@ DEFS      += -DCONFIG_ROOT_VERSION=$(CONFIG_ROOT_VERSION)
 ifeq ($(CONFIG_NO_FLASH),y)
 DEFS      += -DCONFIG_NO_FLASH
 endif
+ifeq ($(CONFIG_SLAVE_APBE),y)
+DEFS      += -DMOD_SLAVE_APBE
+endif
 
 INCS       = -I$(HAL_DIR)/Inc/
 INCS      += -I$(CFG_DIR)/$(CONFIG_MOD_TYPE)/$(INC_DIR)/

@@ -415,10 +415,10 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
   */
 void HAL_SPI_ErrorCallback(SPI_HandleTypeDef *hspi)
 {
-  dbgprint("ERR\r\n");
+  dbgprint("SPIERR\r\n");
 
   /* reset spi */
-  HAL_SPI_DeInit(&hspi);
+  HAL_SPI_DeInit(hspi);
   dbgprint("DeInit called\r\n");
   mod_dev_base_spi_reset();
   MX_SPI_Init();

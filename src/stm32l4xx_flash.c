@@ -121,11 +121,13 @@ int flash_erase(uint32_t start_addr, uint32_t size)
 int program_flash_unlock(void)
 {
     HAL_FLASH_Unlock();
+    return 0;
 }
 
 int program_flash_lock(void)
 {
     HAL_FLASH_Lock();
+    return 0;
 }
 
 int program_flash_dword(const uint64_t *dword)

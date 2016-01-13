@@ -37,10 +37,10 @@
 #include <debug.h>
 #include <greybus.h>
 #include "stm32l4xx_hal.h"
-#include "stm32l4xx_hal_mod.h"
-#include "stm32l4xx_hal_uart.h"
 
 #include <stm32l4xx_flash.h>
+
+#include <stm32_hal_mod.h>
 
 /* Private function prototypes -----------------------------------------------*/
 static uint32_t GetPage(uint32_t Address);

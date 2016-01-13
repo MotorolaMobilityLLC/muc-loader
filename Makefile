@@ -78,7 +78,10 @@ CSRCS      += debug.c \
 	      modsctrl.c \
 	      gbfirmware.c \
 	      datalink.c \
-	      es3_unipro.c
+	      es3_unipro.c \
+	      $(CHIPSET_LC)_muc.c \
+	      $(CHIPSET_LC)_mod_device.c \
+	      $(CHIPSET_LC)_hal_mod.c
 
 # Basic HAL libraries
 CSRCS      += $(CHIPSET_LC)_hal_rcc.c \
@@ -99,6 +102,7 @@ SSRCS       = startup_$(TARGET_DEVICE_LC).s
 VPATH      = ./src
 VPATH     += $(HAL_DIR)/Src
 VPATH     += $(DEV_DIR)/Source/
+VPATH     += $(CFG_DIR)/$(CONFIG_MOD_TYPE)/src
 
 LIBS       = -L$(CMSIS_DIR)/Lib
 

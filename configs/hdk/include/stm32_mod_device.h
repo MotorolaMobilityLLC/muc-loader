@@ -36,7 +36,10 @@
 #include <stdint.h>
 #include <greybus.h>
 
+#define STM32_UID_BASE       0x1fff7590     /* 0x1fff7590-0x1fff759b: UID */
+
 #define BOARD_REVISION      (MOD_BOARDID_PID & 0x0000FFFF)
+#define STM32_UID_BASE       0x1fff7590
 
 #define GPIO_MODS_SL_BPLUS_EN_PORT GPIOA
 #define GPIO_MODS_SL_BPLUS_EN_PIN  GPIO_PIN_12
@@ -61,62 +64,4 @@
 #define GPIO_PORT_FORCE_FLASH    GPIOB
 #define GPIO_PIN_FORCE_FLASH     GPIO_PIN_9
 
-typedef enum
-{
-  PIN_RESET = 0,
-  PIN_SET
-} PinState;
-
-static inline void mods_gpio_clk_enable(void)
-{
-  /* GPIO Ports Clock Enable */
-
-  /* For USART */
-   __GPIOA_CLK_ENABLE();
-
-  /* For GPIOs */
-  __GPIOB_CLK_ENABLE();
-  __GPIOC_CLK_ENABLE();
-
-}
-
-static inline void device_gpio_init(void)
-{
-  GPIO_InitTypeDef GPIO_InitStruct;
-
-  /* Configure GPIO pin : FORCE FLASH */
-  memset(&GPIO_InitStruct, 0, sizeof(GPIO_InitStruct));
-  GPIO_InitStruct.Pin = GPIO_PIN_FORCE_FLASH;
-  GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
-  GPIO_InitStruct.Pull = GPIO_NOPULL;
-  HAL_GPIO_Init(GPIO_PORT_FORCE_FLASH, &GPIO_InitStruct);
-
-  /* Attach Detection */
-  memset(&GPIO_InitStruct, 0, sizeof(GPIO_InitStruct));
-  GPIO_InitStruct.Pin = GPIO_MODS_SL_BPLUS_EN_PIN;
-  GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
-  GPIO_InitStruct.Pull = GPIO_PULLUP;
-  HAL_GPIO_Init(GPIO_MODS_SL_BPLUS_EN_PORT, &GPIO_InitStruct);
-}
-
-static inline PinState mods_force_flash_get(void)
-{
-  return HAL_GPIO_ReadPin(GPIO_PORT_FORCE_FLASH, GPIO_PIN_FORCE_FLASH);
-}
-
-static inline void mod_dev_base_spi_reset(void)
-{
-  __HAL_RCC_SPI2_FORCE_RESET();
-  __HAL_RCC_SPI2_RELEASE_RESET();
-}
-
-/* Is the mod currently attached to a base? */
-static inline bool mod_dev_is_attached(void)
-{
-    PinState ps_attached;
-
-    ps_attached = HAL_GPIO_ReadPin(GPIO_MODS_SL_BPLUS_EN_PORT,
-                                   GPIO_MODS_SL_BPLUS_EN_PIN);
-    return (ps_attached == PIN_SET);
-}
 #endif /* __STM32L4XX_MOD_DEVICE_H */

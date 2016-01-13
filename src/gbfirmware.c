@@ -40,7 +40,7 @@
 #include "stm32l4xx_flash.h"
 
 static bool tftf_header_received = false;
-static uint8_t tftf_buff[512];
+static uint8_t tftf_buff[TFTF_HEADER_SIZE];
 static uint16_t id_count = 1;
 
 /* Greybus FirmWare protocol version we support */
@@ -48,7 +48,6 @@ static uint16_t id_count = 1;
 #define GB_FIRMWARE_VERSION_MINOR   0x01
 
 #define CPORT_POLLING_TIMEOUT       512
-#define FW_TFTF_HEADER_SIZE         (sizeof(tftf_header))
 
 static struct fw_flash_data {
     uint32_t fw_flash_addr;
@@ -125,15 +124,15 @@ static int gbfw_firmware_size_response(gb_operation_header *head, void *data,
     fw_size = firmware_size_response.size;
     dbgprinthex32(fw_size);
 
-    if (fw_size > FW_TFTF_HEADER_SIZE) {
+    if (fw_size > TFTF_HEADER_SIZE) {
         int rc;
-        struct gbfw_get_firmware_request req = {0, FW_TFTF_HEADER_SIZE};
+        struct gbfw_get_firmware_request req = {0, TFTF_HEADER_SIZE};
         rc = greybus_send_request(gbfw_cportid, id_count++, GB_FW_OP_GET_FIRMWARE,
                                   (uint8_t*)&req, sizeof(req));
         if (rc) {
             return rc;
         }
-        fw_flash_data.fw_request_size = FW_TFTF_HEADER_SIZE;
+        fw_flash_data.fw_request_size = TFTF_HEADER_SIZE;
     } else {
         dbgprint("skip empty firmware");
         gbfw_next_stage();
@@ -166,7 +165,7 @@ static int gbfw_get_firmware_response(gb_operation_header *header, void *data,
     data_ptr = (uint8_t *)data;
 
     if(tftf_header_received == false) {
-        if(tf_header->sentinel_value != TFTF_SENTINEL) {
+        if((uint32_t)&tf_header->sentinel_value[0] != TFTF_SENTINEL) {
             return GB_FW_ERR_INVALID;
         }
 
@@ -174,8 +173,8 @@ static int gbfw_get_firmware_response(gb_operation_header *header, void *data,
         tftf_header_received = true;
 
         /* erase image copy address and size */
-        fw_flash_data.fw_flash_addr = tf_header->sections[0].copy_offset;
-        fw_flash_data.fw_remaining_size = tf_header->sections[0].section_length;
+        fw_flash_data.fw_flash_addr = tf_header->sections[0].section_load_address;
+        fw_flash_data.fw_remaining_size = firmware_size_response.size - TFTF_HEADER_SIZE;
         fw_flash_data.fw_offset = 0;
         fw_flash_data.new_payload_size = 0;
 
@@ -186,7 +185,7 @@ static int gbfw_get_firmware_response(gb_operation_header *header, void *data,
         data_ptr += sizeof(tftf_header);
 
         flash_addr = fw_flash_data.fw_flash_addr + fw_flash_data.fw_offset;
-        flash_data_size = fw_flash_data.fw_request_size - FW_TFTF_HEADER_SIZE;
+        flash_data_size = fw_flash_data.fw_request_size - TFTF_HEADER_SIZE;
 
         dbgprint("FLADR:");
         dbgprinthex32(flash_addr);
@@ -194,11 +193,11 @@ static int gbfw_get_firmware_response(gb_operation_header *header, void *data,
 
         program_flash_data(flash_addr, flash_data_size, data_ptr);
 
-        fw_flash_data.fw_offset += (fw_flash_data.fw_request_size - FW_TFTF_HEADER_SIZE);
-        fw_flash_data.fw_remaining_size -= (fw_flash_data.fw_request_size - FW_TFTF_HEADER_SIZE);
+        fw_flash_data.fw_offset += (fw_flash_data.fw_request_size - TFTF_HEADER_SIZE);
+        fw_flash_data.fw_remaining_size -= (fw_flash_data.fw_request_size - TFTF_HEADER_SIZE);
 
         dbgprint("off:");
-        dbgprinthex32(fw_flash_data.fw_offset + FW_TFTF_HEADER_SIZE);
+        dbgprinthex32(fw_flash_data.fw_offset + TFTF_HEADER_SIZE);
         dbgprint("\r\n");
 
         /* Calculate the size for get firmware request */
@@ -225,7 +224,7 @@ static int gbfw_get_firmware_response(gb_operation_header *header, void *data,
         fw_flash_data.fw_remaining_size -= flash_data_size;
 
         dbgprint("off:");
-        dbgprinthex32(fw_flash_data.fw_offset + FW_TFTF_HEADER_SIZE);
+        dbgprinthex32(fw_flash_data.fw_offset + TFTF_HEADER_SIZE);
         dbgprint("\r\n");
         dbgprint("Rem:");
         dbgprinthex32(fw_flash_data.fw_remaining_size);
@@ -242,7 +241,7 @@ static int gbfw_get_firmware_response(gb_operation_header *header, void *data,
         dbgprint("Req:");
         dbgprinthex32(fw_flash_data.new_payload_size);
         dbgprint("\r\n");
-        gbfw_get_firmware(fw_flash_data.fw_offset + FW_TFTF_HEADER_SIZE,
+        gbfw_get_firmware(fw_flash_data.fw_offset + TFTF_HEADER_SIZE,
                           fw_flash_data.new_payload_size);
     } else {
         gbfw_next_stage();
@@ -253,7 +252,6 @@ static int gbfw_get_firmware_response(gb_operation_header *header, void *data,
 static int gbfw_ready_to_boot(uint8_t status) {
     int rc;
     struct gbfw_ready_to_boot_request req = {status};
-
     responded_op = GB_FW_OP_READY_TO_BOOT;
 
     /* ready_to_boot currently doesn't respond so fake a response */

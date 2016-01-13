@@ -34,20 +34,29 @@
 
 
 #define TFTF_HEADER_SIZE                  512
+/* following values are derived from TFTF_HEADER_SIZE */
 #define TFTF_MAX_SECTIONS                 20
+#define TFTF_RESERVED                     4
 
 /**
- * @brief TFTF Sentinal value "TFTF"
+ * @brief TFTF Sentinel value "TFTF"
  *
  * Note: string must be in reverse order so that it looks OK on a little-
  * endian dump.
  */
+#define TFTF_SENTINEL_SIZE                4
+#define TFTF_SENTINEL_VALUE               "TFTF"
 #define TFTF_SENTINEL                     0x46544654
+/* Compile-time test to verify consistency of _SIZE and _VALUE */
+typedef char ___tftf_sentinel_test[(TFTF_SENTINEL_SIZE ==
+                                    sizeof(TFTF_SENTINEL_VALUE) - 1) ?
+                                   1 : 0];
 
 /* Section types */
 #define TFTF_SECTION_END                  0xFE
 #define TFTF_SECTION_RAW_CODE             1
 #define TFTF_SECTION_RAW_DATA             2
+    #define DATA_ADDRESS_TO_BE_IGNORED    0xFFFFFFFF
 #define TFTF_SECTION_COMPRESSED_CODE      3
 #define TFTF_SECTION_COMPRESSED_DATA      4
 #define TFTF_SECTION_MANIFEST             5
@@ -59,8 +68,8 @@ typedef struct {
     uint8_t section_class[3];
     uint32_t section_id;
     uint32_t section_length;
-    uint32_t copy_offset;
-    uint32_t section_expanded_len;
+    uint32_t section_load_address;
+    uint32_t section_expanded_length;
 } __attribute__ ((packed)) tftf_section_descriptor;
 
 #ifndef __GNUC__
@@ -68,30 +77,34 @@ typedef struct {
 #endif
 typedef union {
     struct {
-        uint32_t sentinel_value;
+        char sentinel_value[TFTF_SENTINEL_SIZE];
         uint32_t header_size;
         char build_timestamp[16];
         char firmware_package_name[48];
         uint32_t package_type;
         uint32_t start_location;
-        uint32_t unipro_vid;
+        uint32_t unipro_mid;
         uint32_t unipro_pid;
         uint32_t ara_vid;
         uint32_t ara_pid;
-        uint8_t  reserved[16];
+        uint32_t reserved[TFTF_RESERVED];
         tftf_section_descriptor sections[TFTF_MAX_SECTIONS];
     };
     unsigned char buffer[TFTF_HEADER_SIZE];
 } __attribute__ ((packed)) tftf_header;
+/* Compile-time test hack to verify the header is TFTF_HEADER_SIZE bytes */
+typedef char ___tftf_header_test[(sizeof (tftf_header) == TFTF_HEADER_SIZE) ?
+                                 1 : -1];
 
 typedef struct {
-    uint32_t length;
-    uint32_t type;
+    uint32_t length;            /* total size of tftf_signature structure */
+    uint32_t type;              /* Some ALGORITHM_TYPE_xxx from crypto.h */
     char key_name[96];
     unsigned char signature[256];
 } __attribute__ ((packed)) tftf_signature;
 
 typedef void (*image_entry_func)(void);
 
+uint8_t get_section_index(uint8_t section_type, tftf_section_descriptor *section);
 
 #endif /* __COMMON_INCLUDE_TFTF_H */

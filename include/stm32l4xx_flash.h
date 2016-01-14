@@ -44,5 +44,6 @@ int program_flash_data(uint32_t start, uint32_t size, uint8_t *data);
 int program_flash_lock(void);
 int program_flash_unlock(void);
 int program_flash_dword(const uint64_t *dword);
+int program_tftf_header(uint8_t *data, uint32_t size);
 
 #endif /* __STM32L4XX_FLASH_H */

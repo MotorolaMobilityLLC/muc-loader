@@ -82,6 +82,7 @@ CSRCS      += debug.c \
 	      gbfirmware.c \
 	      datalink.c \
 	      es3_unipro.c \
+	      tftf.c \
 	      $(CHIPSET_LC)_muc.c \
 	      $(CHIPSET_LC)_mod_device.c \
 	      $(CHIPSET_LC)_hal_mod.c

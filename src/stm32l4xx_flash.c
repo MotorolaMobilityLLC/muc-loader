@@ -42,6 +42,8 @@
 
 #include <stm32_hal_mod.h>
 
+#define TFTF_HDR_PAGE_ADDR      (FLASHMODE_FLAG_PAGE - FLASH_PAGE_SIZE)
+
 /* Private function prototypes -----------------------------------------------*/
 static uint32_t GetPage(uint32_t Address);
 static uint32_t GetBank(uint32_t Address);
@@ -164,6 +166,16 @@ int program_flash_data(uint32_t start, uint32_t size, uint8_t *data)
   return 0;
 }
 
+int program_tftf_header(uint8_t *data, uint32_t size)
+{
+  ErasePage((uint32_t)(TFTF_HDR_PAGE_ADDR));
+
+  HAL_FLASH_Unlock();
+  program_flash_data((uint32_t)(TFTF_HDR_PAGE_ADDR), size, data);
+  HAL_FLASH_Lock();
+
+  return 0;
+}
 
 /**
   * @brief  Gets the page of a given address

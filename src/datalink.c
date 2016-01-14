@@ -201,8 +201,6 @@ int process_sent_complete(void)
     if (protocol_type == firmware) {
         dbgprint("protocol_type==firmware\r\n");
         if (responded_op == GB_FW_OP_READY_TO_BOOT) {
-            /* Erase the Flash Mode Barker */
-            ErasePage((uint32_t)(FLASHMODE_FLAG_PAGE));
             dbgprint("READY TO BOOT\r\n");
 #if CONFIG_ROOT_VERSION == 0
             HAL_NVIC_SystemReset();

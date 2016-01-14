@@ -39,15 +39,18 @@
 #include "tftf.h"
 #include "stm32l4xx_flash.h"
 
-static bool tftf_header_received = false;
-static uint8_t tftf_buff[TFTF_HEADER_SIZE];
-static uint16_t id_count = 1;
-
 /* Greybus FirmWare protocol version we support */
 #define GB_FIRMWARE_VERSION_MAJOR   0x00
 #define GB_FIRMWARE_VERSION_MINOR   0x01
 
 #define CPORT_POLLING_TIMEOUT       512
+
+#define MUCLOADER_BASE_ADDR     FLASH_BASE
+
+static bool tftf_header_received = false;
+static uint8_t tftf_buff[TFTF_HEADER_SIZE];
+static uint16_t id_count = 1;
+static uint16_t section_index = 0;
 
 static struct fw_flash_data {
     uint32_t fw_flash_addr;
@@ -165,15 +168,24 @@ static int gbfw_get_firmware_response(gb_operation_header *header, void *data,
     data_ptr = (uint8_t *)data;
 
     if(tftf_header_received == false) {
-        if((uint32_t)&tf_header->sentinel_value[0] != TFTF_SENTINEL) {
+        if(!valid_tftf_header(tf_header)) {
+            dbgprint("INVALID_TFTF");
             return GB_FW_ERR_INVALID;
         }
 
         memcpy(tftf_buff, data_ptr, sizeof(tftf_header));
         tftf_header_received = true;
 
+        /* flash the raw code and any attached sections*/
+        section_index = get_section_index(TFTF_SECTION_RAW_CODE, &tf_header->sections[0]);
+        if(section_index == TFTF_SECTION_END) {
+            dbgprint("No sections to flash");
+            return GB_FW_ERR_INVALID;
+        }
+        dbgprinthex32(section_index);
+
         /* erase image copy address and size */
-        fw_flash_data.fw_flash_addr = tf_header->sections[0].section_load_address;
+        fw_flash_data.fw_flash_addr = tf_header->sections[section_index].section_load_address;
         fw_flash_data.fw_remaining_size = firmware_size_response.size - TFTF_HEADER_SIZE;
         fw_flash_data.fw_offset = 0;
         fw_flash_data.new_payload_size = 0;
@@ -252,8 +264,17 @@ static int gbfw_get_firmware_response(gb_operation_header *header, void *data,
 static int gbfw_ready_to_boot(uint8_t status) {
     int rc;
     struct gbfw_ready_to_boot_request req = {status};
-    responded_op = GB_FW_OP_READY_TO_BOOT;
+    tftf_header *tf_header = (tftf_header *)tftf_buff;
 
+    section_index = get_section_index(TFTF_SECTION_RAW_CODE, &tf_header->sections[0]);
+    if((tf_header->sections[section_index].section_load_address != MUCLOADER_BASE_ADDR)) {
+            program_tftf_header(tftf_buff, sizeof(tftf_buff));
+    }
+
+    /* Erase the Flash Mode Barker */
+    ErasePage((uint32_t)(FLASHMODE_FLAG_PAGE));
+
+    responded_op = GB_FW_OP_READY_TO_BOOT;
     /* ready_to_boot currently doesn't respond so fake a response */
     rc = greybus_send_request(gbfw_cportid, id_count++, GB_FW_OP_READY_TO_BOOT,
                               (uint8_t*)&req, sizeof(req));

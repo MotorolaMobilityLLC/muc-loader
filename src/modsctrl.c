@@ -37,6 +37,7 @@
 #include "stm32l4xx_hal.h"
 
 #include <version.h>
+#include <config.h>
 
 /* Version of the Greybus control protocol we support */
 #define MB_CONTROL_VERSION_MAJOR              0x00

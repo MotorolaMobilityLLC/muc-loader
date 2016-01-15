@@ -152,7 +152,7 @@ $(OUT_DIR)/include/version.h: .version $(OUT_DIR) $(OUT_DIR)/include
 $(OUT_DIR)/include/config.h: .config $(OUT_DIR) $(OUT_DIR)/include
 	@echo '#ifndef _MUCLOADER_CONFIG_H__'       > $@
 	@echo '#define _MUCLOADER_CONFIG_H__'      >> $@
-	@sed -e 's/^/#define /' -e 's/=/\ /' $<    >> $@
+	@sed -e '/^#.*/d' -e 's/^/#define /' -e 's/=/\ /' < $< >> $@
 	@echo                                      >> $@
 	@echo '#endif /* _MUCLOADER_CONFIG_H__ */' >> $@
 

@@ -74,33 +74,36 @@ static int gbctrl_get_version(uint32_t cportid,
     unsigned char payload[2] = {GREYBUS_MAJOR_VERSION,
                                 GREYBUS_MINOR_VERSION};
 
-    return greybus_op_response(cportid,
+    return greybus_send_response(cportid,
                                op_header,
                                GB_OP_SUCCESS,
                                payload,
-                               sizeof(payload));
+                               sizeof(payload),
+                               NULL);
 }
 
 static int gbctrl_probe_ap(uint32_t cportid,
                          gb_operation_header *op_header) {
     uint16_t payload[1] = {0};
 
-    return greybus_op_response(cportid,
+    return greybus_send_response(cportid,
                                op_header,
                                GB_OP_SUCCESS,
                                (unsigned char*)payload,
-                               sizeof(payload));
+                               sizeof(payload),
+                               NULL);
 }
 
 static int gbctrl_get_manifest_size(uint32_t cportid,
                                   gb_operation_header *op_header) {
     uint16_t payload[1] = {sizeof(manifest)};
 
-    return greybus_op_response(cportid,
+    return greybus_send_response(cportid,
                                op_header,
                                GB_OP_SUCCESS,
                                (unsigned char*)payload,
-                               sizeof(payload));
+                               sizeof(payload),
+                               NULL);
 }
 
 static bool manifest_fetched = false;
@@ -112,12 +115,12 @@ bool manifest_fetched_by_ap(void) {
 static int gbctrl_get_manifest(uint32_t cportid,
                              gb_operation_header *op_header) {
     int rc;
-
-    rc = greybus_op_response(cportid,
+    rc = greybus_send_response(cportid,
                              op_header,
                              GB_OP_SUCCESS,
                              manifest,
-                             sizeof(manifest));
+                             sizeof(manifest),
+                             NULL);
     if (rc) {
         return rc;
     }
@@ -132,29 +135,32 @@ static int gbctrl_connected(uint32_t cportid,
     uint16_t *payload = (uint16_t *)(op_header + 1);
 
     if (op_header->size != sizeof(gb_operation_header) + sizeof(*payload)) {
-        greybus_op_response(cportid,
+        greybus_send_response(cportid,
                             op_header,
                             GB_OP_INVALID,
                             NULL,
-                            0);
+                            0,
+                            NULL);
         return -1;
     }
 
     rc = greybus_cport_connect();
     gbfw_cportid = *payload;
     if (rc != 0) {
-        greybus_op_response(cportid,
+        greybus_send_response(cportid,
                             op_header,
                             GB_OP_UNKNOWN_ERROR,
                             NULL,
-                            0);
+                            0,
+                            NULL);
         return -1;
     }
-    return greybus_op_response(cportid,
+    return greybus_send_response(cportid,
                                op_header,
                                GB_OP_SUCCESS,
                                NULL,
-                               0);
+                               0,
+                               NULL);
 }
 
 static int gbctrl_disconnected(uint32_t cportid,
@@ -164,28 +170,48 @@ static int gbctrl_disconnected(uint32_t cportid,
 
     if (op_header->size != sizeof(gb_operation_header) + sizeof(*payload) ||
         *payload != gbfw_cportid) {
-        greybus_op_response(cportid,
+        greybus_send_response(cportid,
                             op_header,
                             GB_OP_INVALID,
                             NULL,
-                            0);
+                            0,
+                            NULL);
         return -1;
     }
 
     rc = greybus_cport_disconnect();
     if (rc != 0) {
-        greybus_op_response(cportid,
+        greybus_send_response(cportid,
                             op_header,
                             GB_OP_UNKNOWN_ERROR,
                             NULL,
-                            0);
+                            0,
+                            NULL);
         return -1;
     }
-    return greybus_op_response(cportid,
+    return greybus_send_response(cportid,
                                op_header,
                                GB_OP_SUCCESS,
                                NULL,
-                               0);
+                               0,
+                               NULL);
+}
+
+static int gbctrl_unimplemented(uint32_t cportid,
+        gb_operation_header *op_header)
+{
+    int rv = GB_OP_SUCCESS;
+
+    if (op_header->id) {
+        rv = greybus_send_response(cportid,
+            op_header,
+            GB_OP_INVALID,
+            NULL,
+            0,
+            NULL);
+    }
+
+    return rv;
 }
 
 int control_cport_handler(uint32_t cportid,
@@ -202,36 +228,25 @@ int control_cport_handler(uint32_t cportid,
 
     switch (op_header->type) {
     case GB_CTRL_OP_VERSION:
-        dbgprint("VER\r\n");
         rc = gbctrl_get_version(cportid, op_header);
         break;
     case GB_CTRL_OP_PROBE_AP:
-        dbgprint("PROBEAP\r\n");
         rc = gbctrl_probe_ap(cportid, op_header);
         break;
     case GB_CTRL_OP_GET_MANIFEST_SIZE:
-        dbgprint("MANIFSIZE\r\n");
         rc = gbctrl_get_manifest_size(cportid, op_header);
         break;
     case GB_CTRL_OP_GET_MANIFEST:
-        dbgprint("MANIFEST\r\n");
         rc = gbctrl_get_manifest(cportid, op_header);
         break;
     case GB_CTRL_OP_CONNECTED:
-        dbgprint("CONN\r\n");
         rc = gbctrl_connected(cportid, op_header);
         break;
     case GB_CTRL_OP_DISCONNECTED:
-        dbgprint("DISCON\r\n");
         rc = gbctrl_disconnected(cportid, op_header);
         break;
     default:
-        dbgprint("default\r\n");
-        greybus_op_response(cportid,
-                            op_header,
-                            GB_OP_INVALID,
-                            NULL,
-                            0);
+        rc  = gbctrl_unimplemented(cportid, op_header);
         break;
     }
 

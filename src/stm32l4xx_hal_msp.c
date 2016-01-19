@@ -34,8 +34,9 @@
 /* Includes ------------------------------------------------------------------*/
 #include "stm32l4xx_hal.h"
 #include "stm32l4xx_hal_uart.h"
-extern DMA_HandleTypeDef hdma_spi2_rx;
-extern DMA_HandleTypeDef hdma_spi2_tx;
+
+DMA_HandleTypeDef hdma_spi2_rx;
+DMA_HandleTypeDef hdma_spi2_tx;
 
 /**
   * Initializes the Global MSP.

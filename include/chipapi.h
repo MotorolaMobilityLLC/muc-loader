@@ -120,12 +120,6 @@ typedef int (*unipro_rx_handler)(uint32_t cportid,
                                  void *data,
                                  size_t len);
 
-/**
- * @brief wait for data from a cport
- * @param cportid cport for the rx
- * @param handler rx handler callback, called before RX is restarted
- */
-int chip_unipro_receive(unsigned int cportid, unipro_rx_handler handler);
 
 /**
  * @brief advertise the boot status to the switch

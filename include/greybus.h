@@ -73,7 +73,10 @@ struct gb_operation_msg {
 
 #define GB_MAX_PAYLOAD_SIZE          (0x800 - 2*sizeof(gb_operation_header))
 
-#define CONTROL_CPORT 0
+/* these must match the manifest */
+#define CONTROL_CPORT      0x0000
+#define FIRMWARE_CPORT     0x0001
+
 #define MODS_CONTROL_CPORT 0xFFFF
 
 #define HDR_BIT_VALID  (0x01 << 7)  /* 1 = valid packet, 0 = dummy packet */
@@ -83,22 +86,22 @@ struct gb_operation_msg {
 #define MSG_TYPE_DL    (0 << 6)     /* Packet for/from data link layer */
 #define MSG_TYPE_NW    (1 << 6)     /* Packet for/from network layer */
 
-struct __attribute__ ((packed)) mods_msg
+struct mods_msg
 {
     uint16_t  cport;
     uint8_t gb_op_hdr[];
-};
+} __attribute__ ((packed));
 
-struct __attribute__ ((packed)) dl_payload_msg
+struct dl_payload_msg
 {
     uint8_t  mesg_id;
     uint8_t  dl_pl[];
-};
+} __attribute__ ((packed));
 
 #ifndef __GNUC__
 #pragma anon_unions
 #endif
-struct __attribute__ ((packed))mods_spi_msg
+struct mods_spi_msg
 {
     uint8_t  hdr_bits;
     uint8_t  reserved;
@@ -106,7 +109,9 @@ struct __attribute__ ((packed))mods_spi_msg
         struct  mods_msg m_msg;
         struct  dl_payload_msg dl_msg;
     };
-};
+} __attribute__ ((packed));
+
+typedef void (*msg_sent_cb)(void); 
 
 int control_cport_handler(uint32_t cportid,
                           void *data,
@@ -116,22 +121,25 @@ int mods_control_handler(uint32_t cportid,
                           void *data,
                           size_t len);
 
-int greybus_op_response(uint32_t cport,
+int greybus_send_response(uint32_t cport,
                         gb_operation_header *op_header,
                         uint8_t status,
                         unsigned char *payload_data,
-                        uint16_t payload_size);
+                        uint16_t payload_size,
+                        msg_sent_cb cb);
 
 int greybus_send_request(uint32_t cport,
                          uint16_t id,
                          uint8_t type,
                          unsigned char *payload_data,
-                         uint16_t payload_size);
+                         uint16_t payload_size,
+                         msg_sent_cb cb);
+
+extern uint16_t greybus_get_next_id(void);
 bool manifest_fetched_by_ap(void);
-int process_mods_msg(struct mods_msg *m_msg);
-int process_mods_dl_msg(struct dl_payload_msg *dl_msg);
-int greybus_processing(void);
-typedef enum {initial, full} e_armDMAtype;
+
+extern struct gb_operation_hdr *greybus_get_operation_header(void);
+extern uint16_t greybus_get_max_msg_size(void);
 
 #define MAX_NW_PL_SIZE          2048 /* cport + GB header + DL payload */
 #define MAX_DMA_BUF_SIZE        MAX_NW_PL_SIZE + DL_HEADER_BITS_SIZE

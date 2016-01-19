@@ -1,6 +1,5 @@
 /**
- * Copyright (c) 2015 Google Inc.
- * Copyright (c) 2015 Motorola Mobility.
+ * Copyright (c) 2016 Motorola Mobility.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -26,48 +25,12 @@
  * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
+#ifndef NETWORK_H__
+#define NETWORK_H__
 
+#include <stdint.h>
 #include <stddef.h>
-#include <stdbool.h>
-#include "boot_main.h"
-#include "debug.h"
-#include "greybus.h"
 
-
-/**
- * @brief send data down a CPort
- * @param cportid cport to send down
- * @param buf data buffer
- * @param len size of data to send
- * @param 0 on success, <0 on error
- */
-int chip_unipro_send(unsigned int cportid, const void *buf, size_t len) {
-
-    struct mods_spi_msg *spi_msg = (struct mods_spi_msg *)buf;
-
-    if (spi_msg == NULL) {
-        return -1;
-    }
-
-    spi_msg->hdr_bits |= HDR_BIT_VALID;
-    spi_msg->hdr_bits |= MSG_TYPE_NW;
-    spi_msg->m_msg.cport = cportid;
-
-    respReady = true;
-
-    return 0;
-}
-
-int chip_unipro_receive(unsigned int cportid, unipro_rx_handler handler) {
-    struct mods_spi_msg *spi_msg = (struct mods_spi_msg *)&aRxBuffer[0];
-    if (handler != NULL) {
-        if(0 != handler(cportid,
-                        spi_msg->m_msg.gb_op_hdr,
-                        negotiated_pl_size - NW_HEADER_SIZE)) {
-            dbgprint("RX handler returned error\r\n");
-            return -1;
-        }
-    }
-    return 0;
-}
-
+extern int network_recv(const void *buf, size_t len);
+extern int network_send(uint32_t cport,  uint8_t *buf, size_t len, msg_sent_cb cb);
+#endif

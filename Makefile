@@ -115,8 +115,8 @@ CSRCS      += debug.c \
 	      ctrl.c \
 	      modsctrl.c \
 	      gbfirmware.c \
-	      datalink.c \
-	      es3_unipro.c \
+	      network.c \
+	      dl_spi.c \
 	      tftf.c \
 	      crypto.c \
 	      public_keys.c \

@@ -33,16 +33,25 @@
 #define DL_MUC_OP_BUS_CONFIG        0x00
 #define DL_MUC_OP_BUS_CONFIG_RESP   0x80
 
+typedef enum {
+    initial,
+    full
+} e_armDMAtype;
+
+typedef enum {
+    datalink,
+    control,
+    firmware
+} e_protocol_type;
+
+extern e_armDMAtype dl_get_dma_type(void);
+extern void dl_set_dma_type(e_armDMAtype type);
+extern void dl_set_protocol_type(e_protocol_type t);
+extern e_protocol_type dl_get_protocol_type(void);
 extern int process_sent_complete(void);
-
 extern void dl_init(void);
+extern int dl_process_msg(void* msg);
+extern int datalink_send(uint8_t *buf, size_t len, msg_sent_cb cb);
 
-struct __attribute__ ((__packed__)) dl_muc_bus_config_request {
-  uint16_t max_payload_size;
-};
-struct __attribute__ ((__packed__)) dl_muc_bus_config_response {
-  uint32_t max_bus_speed;
-  uint16_t sel_payload_size;
-};
-
+extern void setup_exchange(void);
 #endif

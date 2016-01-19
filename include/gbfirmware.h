@@ -77,6 +77,7 @@ struct __attribute__ ((__packed__)) gbfw_ready_to_boot_request {
   uint8_t status;
 };
 
+extern int fw_cport_handler(uint32_t cportid, void *data, size_t len);
 extern int gbfw_firmware_size(uint8_t stage);
 
 int greybus_cport_connect(void);

@@ -114,11 +114,12 @@ static int modsctrl_get_version(uint32_t cportid,
     unsigned char payload[2] = {MB_CONTROL_VERSION_MAJOR,
                                 MB_CONTROL_VERSION_MINOR};
 
-    return greybus_op_response(cportid,
+    return greybus_send_response(cportid,
                                op_header,
                                GB_OP_SUCCESS,
                                payload,
-                               sizeof(payload));
+                               sizeof(payload),
+                               NULL);
 }
 
 static int modsctrl_get_ids(uint32_t cportid,
@@ -137,11 +138,12 @@ static int modsctrl_get_ids(uint32_t cportid,
     get_ids_resp.slave_mask = 0;
 #endif
 
-    return greybus_op_response(cportid,
+    return greybus_send_response(cportid,
                                op_header,
                                GB_OP_SUCCESS,
                                (unsigned char *)&get_ids_resp,
-                               sizeof(get_ids_resp));
+                               sizeof(get_ids_resp),
+                               NULL);
 }
 
 static int modsctrl_reboot(uint32_t cportid,
@@ -175,13 +177,13 @@ static int modsctrl_unimplemented(uint32_t cportid,
 {
     int rv = GB_OP_SUCCESS;
 
-    dbgprintx32("unimplemented: ", op_header->id, "\r\n");
     if (op_header->id) {
-        rv = greybus_op_response(cportid,
+        rv = greybus_send_response(cportid,
             op_header,
             GB_OP_INVALID,
             NULL,
-            0);
+            0,
+            NULL);
     }
 
     return rv;
@@ -192,26 +194,26 @@ static int modsctrl_root_version(uint32_t cportid,
 {
     struct mb_control_root_ver_response resp = { CONFIG_ROOT_VERSION };
 
-    return greybus_op_response(cportid,
+    return greybus_send_response(cportid,
             op_header,
             GB_OP_SUCCESS,
             (unsigned char *)&resp,
-            sizeof(resp));
+            sizeof(resp),
+            NULL);
 }
 
 static int modsctrl_slave_power(uint32_t cportid,
         struct gb_operation_msg *msg)
 {
     int ret = 0;
+#ifdef MOD_SLAVE_APBE
     struct mb_control_power_ctrl_request *req =
         (struct mb_control_power_ctrl_request *)msg->data;
 
-#ifdef MOD_SLAVE_APBE
     ret = slave_pwrctrl_set_mode(req->mode);
 #else
     ret = modsctrl_unimplemented(cportid, (gb_operation_header *)msg);
 #endif
-
     return ret ? GB_OP_UNKNOWN_ERROR : GB_OP_SUCCESS;
 }
 
@@ -229,36 +231,28 @@ int mods_control_handler(uint32_t cportid,
 
     switch (op_header->type) {
     case MB_CONTROL_TYPE_PROTOCOL_VERSION:
-        dbgprint("MODCTRL:VER\r\n");
         rc = modsctrl_get_version(cportid, op_header);
         break;
     case MB_CONTROL_TYPE_GET_IDS:
-        dbgprint("MODCTRL:GET_IDS\r\n");
         rc = modsctrl_get_ids(cportid, op_header);
         break;
     case MB_CONTROL_TYPE_REBOOT:
-        dbgprint("MODCTRL:REBOOT\r\n");
         rc = modsctrl_reboot(cportid,
                 (struct gb_operation_msg *)op_header);
         break;
     case MB_CONTROL_TYPE_PORT_CONNECTED:
-        dbgprint("MODCTRL:CONNECTED\r\n");
         rc = modsctrl_unimplemented(cportid, op_header);
         break;
     case MB_CONTROL_TYPE_PORT_DISCONNECTED:
-        dbgprint("MODCTRL:DISCONNECTED\r\n");
         rc = modsctrl_unimplemented(cportid, op_header);
         break;
     case MB_CONTROL_TYPE_SLAVE_POWER:
-        dbgprint("MODCTRL:SLAVE_POWER\r\n");
         rc = modsctrl_slave_power(cportid, (struct gb_operation_msg *)op_header);
         break;
     case MB_CONTROL_TYPE_ROOT_VERSION:
-        dbgprint("MODCTRL:ROOT_VERSION\r\n");
         rc = modsctrl_root_version(cportid, op_header);
         break;
     default:
-        dbgprintx32("MODCTRL:default: ", op_header->type, "\r\n");
         rc = modsctrl_unimplemented(cportid, op_header);
         break;
     }

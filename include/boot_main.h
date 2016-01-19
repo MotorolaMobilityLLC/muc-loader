@@ -36,19 +36,6 @@
 #include <stdint.h>
 #include <greybus.h>
 
-/* Rx and Tx buffer for transport layer */
-extern uint8_t aRxBuffer[];
-extern uint8_t aTxBuffer[];
-
-/* flag to arm the DMA */
-extern volatile bool armDMA;
-/* flag to indicate a response is ready to be sent out */
-extern volatile bool respReady;
-/* enum to indicate transport payload size type*/
-extern e_armDMAtype armDMAtype;
-/* negotiated transport payload size with base */
-extern uint16_t negotiated_pl_size;
-
 extern int get_chip_id(uint32_t *mfg_id, uint32_t *prod_id);
 extern int get_board_id(uint32_t *vend_id, uint32_t *prod_id);
 extern int get_chip_uid(uint64_t *uid_high, uint64_t *uid_low);

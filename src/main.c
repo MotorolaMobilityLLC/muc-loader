@@ -81,29 +81,6 @@ static const struct memory_map mmap[MMAP_PARTITION_NUM] = {
   {0, 0, 0},
 };
 
-SPI_HandleTypeDef hspi;
-DMA_HandleTypeDef hdma_spi2_rx;
-DMA_HandleTypeDef hdma_spi2_tx;
-
-/* Buffer used for transmission */
-uint8_t aTxBuffer[MAX_DMA_BUF_SIZE];
-/* Buffer used for reception */
-uint8_t aRxBuffer[MAX_DMA_BUF_SIZE];
-
-volatile bool  armDMA = false;
-volatile bool respReady = true;
-uint16_t negotiated_pl_size;
-
-/* USER CODE END PV */
-struct ring_buf *txp_rb;
-e_armDMAtype armDMAtype;
-
-/* USER CODE BEGIN PV */
-/* Private variables ---------------------------------------------------------*/
-
-/* USER CODE END PV */
-
-/* Private function prototypes -----------------------------------------------*/
 static void Error_Handler(void);
 
 /* USER CODE BEGIN PFP */
@@ -195,52 +172,6 @@ enum BootState CheckFlashMode(void)
   return bootState;
 }
 
-/* USER CODE END 0 */
-void setup_exchange(void)
-{
-  uint32_t buf_size;
-
-  if (!mod_dev_is_attached()) {
-    dbgprint("Detached\r\n");
-    HAL_NVIC_SystemReset();
-  }
-
-  /* Start the Full Duplex Communication process */
-  /* While the SPI in TransmitReceive process, user can transmit data through
-     "aTxBuffer" buffer & receive data through "aRxBuffer" */
-  if (armDMA == true) {
-    /* Response is ready, signal INT to base */
-    if (respReady == true) {
-       mods_muc_int_set(PIN_SET);
-    }
-
-    /* Wait for WAKE_N to arm DMA */
-    if (mods_wake_n_get() == PIN_SET) {
-      return;
-    }
-
-    dbgprint("WKE-L\r\n");
-
-    /* select DMA buffer size */
-    if(armDMAtype == initial)
-      buf_size = INITIAL_DMA_BUF_SIZE + DL_HEADER_BITS_SIZE;
-    else
-      buf_size = negotiated_pl_size + DL_HEADER_BITS_SIZE;
-
-    if (HAL_SPI_TransmitReceive_DMA(&hspi, (uint8_t*)aTxBuffer,
-                                    (uint8_t *)aRxBuffer, buf_size) != HAL_OK) {
-      /* Transfer error in transmission process */
-      Error_Handler();
-    }
-
-    dbgprinthex32(buf_size);
-    dbgprint("--ARMED\r\n");
-
-    armDMA = false;
-    mods_rfr_set(PIN_SET);
-  }
-}
-
 int main(void)
 {
   enum BootState bootState = CheckFlashMode();
@@ -288,11 +219,8 @@ int main(void)
   /* Config SPI NSS in interrupt mode */
   SPI_NSS_INT_CTRL_Config();
 
-  armDMA = true;
-  respReady = false;
-  armDMAtype = initial;
+
   dl_init();
-  negotiated_pl_size = INITIAL_DMA_BUF_SIZE;
 
   while (1) {
     setup_exchange();
@@ -352,43 +280,6 @@ int set_request_flash(void)
   return rv;
 }
 
-static int process_network_msg(struct mods_spi_msg *spi_msg)
-{
-  struct mods_spi_msg *dl = spi_msg;
-
-  if (spi_msg->hdr_bits & HDR_BIT_VALID) {
-    if ((spi_msg->hdr_bits & HDR_BIT_TYPE) == MSG_TYPE_NW ) {
-      /* Process mods message */
-      process_mods_msg(&spi_msg->m_msg);
-    } else if ((spi_msg->hdr_bits & HDR_BIT_TYPE) == MSG_TYPE_DL ) {
-      process_mods_dl_msg(&dl->dl_msg);
-    } else {
-      return 0;
-    }
-  } else if (respReady) {
-    /* we were sending a message so handle it */
-    respReady = false;
-    process_sent_complete();
-  } else {
-    dbgprint("UNEXPECTED MSG!!\r\n");
-  }
-  return 0;
-}
-
-/**
-  * @brief  TxRx Transfer completed callback.
-  * @param  hspi: SPI handle
-  * @retval None
-  */
-void HAL_SPI_TxRxCpltCallback(SPI_HandleTypeDef *hspi)
-{
-  memset(aTxBuffer,0,MAX_DMA_BUF_SIZE);
-  process_network_msg((struct mods_spi_msg *)aRxBuffer);
-  memset(aRxBuffer,0,MAX_DMA_BUF_SIZE);
-
-  armDMA = true;
-}
-
 /**
   * @brief  EXTI line detection callback.
   * @param  GPIO_Pin: Specifies the port pin connected to corresponding EXTI line.
@@ -400,39 +291,6 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
     mods_rfr_set(PIN_RESET);
     mods_muc_int_set(PIN_RESET);
   }
-}
-
-/**
-  * @brief  SPI error callbacks.
-  * @param  hspi: SPI handle
-  * @note   This example shows a simple way to report transfer error, and you can
-  *         add your own implementation.
-  * @retval None
-  */
-void HAL_SPI_ErrorCallback(SPI_HandleTypeDef *hspi)
-{
-  dbgprint("SPIERR\r\n");
-
-  /* reset spi */
-  HAL_SPI_DeInit(hspi);
-  dbgprint("DeInit called\r\n");
-  mod_dev_base_spi_reset();
-  MX_SPI_Init();
-  dbgprint("Re-Init\r\n");
-  memset(aTxBuffer, 0, MAX_DMA_BUF_SIZE);
-  memset(aRxBuffer, 0, MAX_DMA_BUF_SIZE);
-  armDMA = true;
-}
-
-/**
-  * @brief  This function is executed in case of error occurrence.
-  * @param  None
-  * @retval None
-  */
-static void Error_Handler(void)
-{
-  dbgprint("FTL\r\n");
-  HAL_NVIC_SystemReset();
 }
 
 #ifdef MOD_SLAVE_APBE

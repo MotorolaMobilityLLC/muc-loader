@@ -29,61 +29,82 @@
 
 #include <stddef.h>
 #include <string.h>
-#include "boot_main.h"
 #include "debug.h"
+
 #include "greybus.h"
+#include "network.h"
+
+extern gb_operation_header *gb_op_hdr;   /* TODO: factor out shared globals */
+
+static uint16_t greybus_id_count = 1;
+uint16_t greybus_get_next_id(void)
+{
+    uint16_t next = greybus_id_count++;
+    if (!next)
+        next = 1;
+    return next;
+}
 
 static int greybus_send_message(uint32_t cport,
                                 uint16_t id,
                                 uint8_t type,
                                 uint8_t status,
                                 unsigned char *payload_data,
-                                uint16_t payload_size) {
-    /**
-     * the payload_size are all pretty small for Greybus Control protocol
-     * and the firmware downloading protocol on the boot ROM side.
-     * So we can use the variable sized array here and not worrying
-     * about running out of stack space
-     */
-    struct mods_spi_msg *spi_msg = (struct mods_spi_msg *)&aTxBuffer[0];
+                                uint16_t payload_size,
+                                msg_sent_cb cb)
+{
+    struct gb_operation_msg *msg = (struct gb_operation_msg *)greybus_get_operation_header();
+    unsigned char *payload = &msg->data[0];
 
-    gb_operation_header *msg_header = (gb_operation_header *)&spi_msg->m_msg.gb_op_hdr;
-    unsigned char *payload = &spi_msg->m_msg.gb_op_hdr[sizeof(gb_operation_header)];
+    dbgprint("greybus_send_message\r\n");
+    dbgprintx32("  - id = ", id, "\r\n");
+    dbgprintx32("  - type = ", type, "\r\n");
+    dbgprintx32("  - status = ", status, "\r\n");
+    dbgprintx32("  - gb_op_hdr = ", (uint32_t)msg, "\r\n");
+    dbgprintx32("  - payload = ", (uint32_t) payload, "\r\n");
+    dbgprintx32("  - callback = ", (uint32_t) cb, "\r\n");
 
-    msg_header->size    = sizeof(gb_operation_header) + payload_size;
-    msg_header->id      = id;
-    msg_header->type    = type;
-    msg_header->status  = status;
-    msg_header->padding = 0;
+    msg->hdr.size    = sizeof(struct gb_operation_hdr) + payload_size;
+    msg->hdr.id      = id;
+    msg->hdr.type    = type;
+    msg->hdr.status  = status;
+    msg->hdr.padding = 0;
 
     if (payload_size != 0 && payload_data != NULL) {
         memcpy(payload, payload_data, payload_size);
     }
-    return chip_unipro_send(cport, spi_msg, sizeof(spi_msg));
+
+    return network_send(cport, (uint8_t *)msg, msg->hdr.size, cb);
 }
 
 int greybus_send_request(uint32_t cport,
                          uint16_t id,
                          uint8_t type,
                          unsigned char *payload_data,
-                         uint16_t payload_size) {
+                         uint16_t payload_size,
+                         msg_sent_cb cb)
+{
     return greybus_send_message(cport,
                                 id,
                                 type,
                                 0,
                                 payload_data,
-                                payload_size);
+                                payload_size,
+                                cb);
 }
 
-int greybus_op_response(uint32_t cport,
+int greybus_send_response(uint32_t cport,
                         gb_operation_header *op_header,
                         uint8_t status,
                         unsigned char *payload_data,
-                        uint16_t payload_size) {
+                        uint16_t payload_size,
+                        msg_sent_cb cb)
+{
     return greybus_send_message(cport,
                                 op_header->id,
                                 op_header->type | GB_TYPE_RESPONSE,
                                 status,
                                 payload_data,
-                                payload_size);
+                                payload_size,
+                                cb);
 }

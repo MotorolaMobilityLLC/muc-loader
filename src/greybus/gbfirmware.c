@@ -50,7 +50,6 @@
 
 static bool tftf_header_received = false;
 static uint8_t tftf_buff[TFTF_HEADER_SIZE];
-static uint16_t id_count = 1;
 static uint16_t section_index = 0;
 
 static struct fw_flash_data {
@@ -61,34 +60,40 @@ static struct fw_flash_data {
     uint32_t new_payload_size;
 } fw_flash_data;
 
-extern uint32_t agreed_pl_size;
-uint8_t responded_op = GB_FW_OP_INVALID;
-
 static uint8_t _gbfw_stage = 0x00;  /* current flashing stage */
 
-int fw_cport_handler(uint32_t cportid, void *data, size_t len);
 static int gbfw_ready_to_boot(uint8_t status);
 
-static int gbfw_get_version(uint32_t cportid, gb_operation_header *header) {
+static int gbfw_get_version(uint32_t cportid, gb_operation_header *header)
+{
     uint8_t payload[2] = {GB_FIRMWARE_VERSION_MAJOR, GB_FIRMWARE_VERSION_MINOR};
-    return greybus_op_response(cportid, header, GB_OP_SUCCESS, payload,
-                               sizeof(payload));
+    return greybus_send_response(cportid, header, GB_OP_SUCCESS, payload,
+                               sizeof(payload), NULL);
 }
 
-static int gbfw_ap_ready(uint32_t cportid, gb_operation_header *header) {
-    return greybus_op_response(cportid, header, GB_OP_SUCCESS, NULL, 0);
+static void gbfw_ap_ready_cb(void)
+{
+   (void)gbfw_firmware_size(GBFW_STAGE_MIN);
+}
+
+static int gbfw_ap_ready(uint32_t cportid, gb_operation_header *header)
+{
+    return greybus_send_response(cportid, header, GB_OP_SUCCESS, NULL, 0, gbfw_ap_ready_cb);
 }
 
 static struct gbfw_firmware_size_response firmware_size_response;
+static int gbfw_firmware_size_response(gb_operation_header *head, void *data,
+                                       uint32_t len);
 
-int gbfw_firmware_size(uint8_t stage) {
+int gbfw_firmware_size(uint8_t stage)
+{
     int rc;
     struct gbfw_firmware_size_request req = {stage};
-
+    uint16_t msg_id = greybus_get_next_id();
     _gbfw_stage = stage;
 
-    rc = greybus_send_request(gbfw_cportid, id_count++, GB_FW_OP_FIRMWARE_SIZE,
-                              (uint8_t*)&req, sizeof(req));
+    rc = greybus_send_request(gbfw_cportid, msg_id, GB_FW_OP_FIRMWARE_SIZE,
+                              (uint8_t*)&req, sizeof(req), NULL);
     if (rc) {
         return rc;
     }
@@ -96,9 +101,11 @@ int gbfw_firmware_size(uint8_t stage) {
     return 0;
 }
 
-static void gbfw_next_stage(void) {
+static void gbfw_next_stage(void)
+{
     memset(&fw_flash_data, 0, sizeof(fw_flash_data));
     tftf_header_received = false;
+
 
     if (_gbfw_stage >= GBFW_STAGE_MIN && _gbfw_stage < GBFW_STAGE_MAX) {
         gbfw_firmware_size(_gbfw_stage + 1);
@@ -109,15 +116,14 @@ static void gbfw_next_stage(void) {
 
 
 static int gbfw_firmware_size_response(gb_operation_header *head, void *data,
-                                       uint32_t len) {
+                                       uint32_t len)
+{
     size_t fw_size;
 
     if (head->status) {
         gbfw_next_stage();
         return 0;
     }
-
-    responded_op = GB_FW_OP_FIRMWARE_SIZE;
 
     if (len < sizeof(struct gbfw_firmware_size_response)) {
         dbgprint("gbfw_firmware_size_response: bad response size\r\n");
@@ -131,8 +137,10 @@ static int gbfw_firmware_size_response(gb_operation_header *head, void *data,
     if (fw_size > TFTF_HEADER_SIZE) {
         int rc;
         struct gbfw_get_firmware_request req = {0, TFTF_HEADER_SIZE};
-        rc = greybus_send_request(gbfw_cportid, id_count++, GB_FW_OP_GET_FIRMWARE,
-                                  (uint8_t*)&req, sizeof(req));
+        uint16_t msg_id = greybus_get_next_id();
+
+        rc = greybus_send_request(gbfw_cportid, msg_id, GB_FW_OP_GET_FIRMWARE,
+                                  (uint8_t*)&req, sizeof(req), NULL);
         if (rc) {
             return rc;
         }
@@ -145,11 +153,14 @@ static int gbfw_firmware_size_response(gb_operation_header *head, void *data,
     return 0;
 }
 
-static int gbfw_get_firmware(uint32_t offset, uint32_t size) {
+static int gbfw_get_firmware(uint32_t offset, uint32_t size)
+{
     int rc;
     struct gbfw_get_firmware_request req = {offset, size};
-    rc = greybus_send_request(gbfw_cportid, id_count++, GB_FW_OP_GET_FIRMWARE,
-                              (uint8_t*)&req, sizeof(req));
+    uint16_t msg_id = greybus_get_next_id();
+
+    rc = greybus_send_request(gbfw_cportid, msg_id, GB_FW_OP_GET_FIRMWARE,
+                              (uint8_t*)&req, sizeof(req), NULL);
     if (rc) {
         return rc;
     }
@@ -157,9 +168,9 @@ static int gbfw_get_firmware(uint32_t offset, uint32_t size) {
     return 0;
 }
 
-
 static int gbfw_get_firmware_response(gb_operation_header *header, void *data,
-                                      uint32_t len) {
+                                      uint32_t len)
+{                                      
     uint8_t *data_ptr;
     uint32_t flash_addr;
     uint32_t flash_data_size;
@@ -214,7 +225,7 @@ static int gbfw_get_firmware_response(gb_operation_header *header, void *data,
         dbgprint("\r\n");
 
         /* Calculate the size for get firmware request */
-        pl_data_size = agreed_pl_size - (NW_HEADER_SIZE + GB_HEADER_SIZE);
+        pl_data_size = greybus_get_max_msg_size();
         /* data size should be multiple of uint64_t */
         fw_flash_data.fw_request_size =
                  pl_data_size - (pl_data_size % sizeof(uint64_t));
@@ -262,10 +273,19 @@ static int gbfw_get_firmware_response(gb_operation_header *header, void *data,
     return 0;
 }
 
-static int gbfw_ready_to_boot(uint8_t status) {
+static void gbfw_ready_to_boot_cb(void)
+{
+#if CONFIG_ROOT_VERSION == 0
+    HAL_NVIC_SystemReset();
+#endif
+}
+
+static int gbfw_ready_to_boot(uint8_t status)
+{
     int rc;
     struct gbfw_ready_to_boot_request req = {status};
     tftf_header *tf_header = (tftf_header *)tftf_buff;
+    uint16_t msg_id = greybus_get_next_id();
 
     section_index = get_section_index(TFTF_SECTION_RAW_CODE, &tf_header->sections[0]);
     if((tf_header->sections[section_index].section_load_address != MUCLOADER_BASE_ADDR)) {
@@ -275,16 +295,16 @@ static int gbfw_ready_to_boot(uint8_t status) {
     /* Erase the Flash Mode Barker */
     ErasePage((uint32_t)(FLASHMODE_FLAG_PAGE));
 
-    responded_op = GB_FW_OP_READY_TO_BOOT;
     /* ready_to_boot currently doesn't respond so fake a response */
-    rc = greybus_send_request(gbfw_cportid, id_count++, GB_FW_OP_READY_TO_BOOT,
-                              (uint8_t*)&req, sizeof(req));
+    rc = greybus_send_request(gbfw_cportid, msg_id, GB_FW_OP_READY_TO_BOOT,
+                              (uint8_t*)&req, sizeof(req), gbfw_ready_to_boot_cb);
 
     return rc;
 }
 
 static int gbfw_ready_to_boot_response(gb_operation_header *header, void *data,
-                                       uint32_t len) {
+                                       uint32_t len) 
+{
     if (header->status) {
         dbgprint("gbfw_ready_to_boot_response(): got error status\r\n");
         return -header->status;
@@ -324,38 +344,27 @@ int fw_cport_handler(uint32_t cportid, void *data, size_t len) {
      * synchronously.  We set the constant and return to the recipient rather
      * than setting the constant in parallel with the recipient.
      */
-    responded_op = op_header->type;
     data_ptr += sizeof(gb_operation_header);
     len -= sizeof(gb_operation_header);
     switch (op_header->type) {
     case GB_FW_OP_PROTOCOL_VERSION:
-        dbgprint("FWVER\r\n");
         rc = gbfw_get_version(cportid, op_header);
         break;
     case GB_FW_OP_FIRMWARE_SIZE | GB_TYPE_RESPONSE:
-        dbgprint("FWSZRSP\r\n");
         rc = gbfw_firmware_size_response(op_header, data_ptr, len);
         break;
     case GB_FW_OP_GET_FIRMWARE | GB_TYPE_RESPONSE:
-        dbgprint("GETFWRESP\r\n");
         rc = gbfw_get_firmware_response(op_header, data_ptr, len);
         break;
     case GB_FW_OP_READY_TO_BOOT | GB_TYPE_RESPONSE:
-        dbgprint("FWBOOT\r\n");
         rc = gbfw_ready_to_boot_response(op_header, data_ptr, len);
         break;
     case GB_FW_OP_AP_READY:
-        dbgprint("FWAPRDY\r\n");
         rc = gbfw_ap_ready(cportid, op_header);
         break;
     default:
         dbgprint("FWDFLT\r\n");
-        responded_op = GB_FW_OP_INVALID;
         break;
-    }
-
-    if (rc) {
-        responded_op = GB_FW_OP_INVALID;
     }
 
     return rc;

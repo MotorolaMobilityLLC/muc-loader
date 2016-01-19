@@ -142,8 +142,9 @@ CSRCS      += $(CHIPSET_LC)_hal_rcc.c \
 SSRCS       = $(STARTUP_S)
 
 VPATH      = ./src
+VPATH     += ./src/greybus
 VPATH     += $(HAL_DIR)/Src
-VPATH     += $(DEV_DIR)/Source/
+VPATH     += $(DEV_DIR)/Source
 VPATH     += $(CFG_DIR)/$(CONFIG_MOD_TYPE)/src
 VPATH     += $(MAN_DIR)/
 

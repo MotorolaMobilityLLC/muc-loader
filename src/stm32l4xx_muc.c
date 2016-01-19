@@ -33,6 +33,17 @@
 static UART_HandleTypeDef huart;
 extern SPI_HandleTypeDef  hspi; /* defined in main */
 
+#define OTP_BASE_ADDR      0x1FFF7000
+/* Each OTP block is 8 bytes(double word) */
+#define MAX_OTP_BLOCKS  128
+#define OTP_BLOCK_SIZE  8
+#define MAX_KEY_REVOKES 16
+
+struct otp_registers {
+  uint64_t key_revoked[MAX_KEY_REVOKES];
+  uint64_t reserved[MAX_OTP_BLOCKS - MAX_KEY_REVOKES];
+};
+
 bool mods_is_spi_csn(uint16_t pin)
 {
   return (pin == GPIO_PIN_SPI_CS_N);
@@ -191,4 +202,21 @@ void MX_GPIO_Init(void)
   HAL_GPIO_Init(GPIO_PORT_WAKE_N, &GPIO_InitStruct);
 
   device_gpio_init();
+}
+
+int chip_is_key_revoked(int index)
+{
+  struct otp_registers *otp_regs;
+  uint32_t data;
+
+  otp_regs = (struct otp_registers *)(OTP_BASE_ADDR);
+  data = (__IO uint32_t)otp_regs->key_revoked[index];
+
+  dbgprintx32("OTP Revoke: ", data, "\r\n");
+
+  if (data == 0)
+  {
+    return 1;
+  }
+  return 0;
 }

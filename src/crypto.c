@@ -28,12 +28,11 @@
 
 #include <stddef.h>
 #include <string.h>
-#include "bootrom.h"
 #include "tftf.h"
 #include "debug.h"
 #include "crypto.h"
 
-#include "../vendors/MIRACL/bootrom.c"
+#include "./bootrom.c"
 
 void (*sha256_init_func)(sha256 *sh);
 void (*sha256_process_func)(sha256 *sh,int byte);
@@ -100,7 +99,7 @@ static int find_public_key(tftf_signature *signature, const unsigned char **key)
 
     for (k = 0; k < number_of_public_keys; k++) {
         if (chip_is_key_revoked(k)) {
-            dbgprintx32("Key ", k, " revoked\n");
+            dbgprintx32("Key ", k, " revoked\r\n");
             continue;
         }
         pk = (uint32_t *)&public_keys[k];
@@ -110,13 +109,13 @@ static int find_public_key(tftf_signature *signature, const unsigned char **key)
             }
         }
         if (i >= size) {
-            dbgprint("Found pub. key for this sig.\n");
+            dbgprint("Found pub. key for this sig.\r\n");
             *key = public_keys[k].key;
             return 0;
         }
     }
 
-    dbgprint("Failed to find pub. key for this sig.\n");
+    dbgprint("Failed to find pub. key for this sig.\r\n");
     return -1;
 }
 
@@ -150,9 +149,9 @@ int verify_signature(unsigned char *digest, tftf_signature *signature) {
                               (char *)signature->signature) ? 0 : -1;
 
     if (ret) {
-        dbgprint("Signature failed\n");
+        dbgprint("Signature failed\r\n");
     } else {
-        dbgprint("Signature verified\n");
+        dbgprint("Signature verified\r\n");
 #if BOOT_STAGE == 1
         communication_area *p = (communication_area *)&_communication_area;
         memcpy(p->stage_2_firmware_identity,
@@ -168,14 +167,8 @@ int verify_signature(unsigned char *digest, tftf_signature *signature) {
 }
 
 void crypto_init(void) {
-#if BOOT_STAGE == 1
-    set_shared_function(SHARED_FUNCTION_SHA256_INIT, shs256_init);
-    set_shared_function(SHARED_FUNCTION_SHA256_PROCESS, shs256_process);
-    set_shared_function(SHARED_FUNCTION_SHA256_HASH, shs256_hash);
-    set_shared_function(SHARED_FUNCTION_RSA2048_VERIFY, rsa_verify);
-#endif
-    sha256_init_func = get_shared_function(SHARED_FUNCTION_SHA256_INIT);
-    sha256_process_func = get_shared_function(SHARED_FUNCTION_SHA256_PROCESS);
-    sha256_hash_func = get_shared_function(SHARED_FUNCTION_SHA256_HASH);
-    rsa2048_verify_func = get_shared_function(SHARED_FUNCTION_RSA2048_VERIFY);
+    sha256_init_func = shs256_init;
+    sha256_process_func = shs256_process;
+    sha256_hash_func = shs256_hash;
+    rsa2048_verify_func = rsa_verify;
 }

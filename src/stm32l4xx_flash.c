@@ -48,6 +48,11 @@
 static uint32_t GetPage(uint32_t Address);
 static uint32_t GetBank(uint32_t Address);
 
+uint32_t mod_get_tftf_addr(void)
+{
+  return (uint32_t)(TFTF_HDR_PAGE_ADDR);
+}
+
 void ErasePage(uint32_t pageAddress)
 {
   FLASH_EraseInitTypeDef EraseInitStruct;

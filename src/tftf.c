@@ -33,6 +33,7 @@
 #include "utils.h"
 #include "crypto.h"
 #include <errno.h>
+#include "boot_main.h"
 
 #define NEW_VALIDATION
 
@@ -102,7 +103,7 @@ bool valid_tftf_type(uint32_t section_type) {
  * @returns True if valid section, false otherwise
  */
 bool valid_tftf_section(tftf_section_descriptor * section,
-                        tftf_header * header,
+                        const tftf_header * header,
                         bool * section_contains_start,
                         bool * end_of_sections) {
     uint32_t    section_start;
@@ -112,7 +113,7 @@ bool valid_tftf_section(tftf_section_descriptor * section,
     tftf_section_descriptor * other_section;
 
     if (!valid_tftf_type(section->section_type)) {
-        dbgprint("BRE_TFTF_HEADER_TYPE");
+        dbgprint("BRE_TFTF_HEADER_TYPE\r\n");
         return false;
     }
 
@@ -135,7 +136,7 @@ bool valid_tftf_section(tftf_section_descriptor * section,
 
     /* Verify the expanded/compressed lengths are sane */
     if (section->section_expanded_length < section->section_length) {
-        dbgprint("BRE_TFTF_COMPRESSION_BAD");
+        dbgprint("BRE_TFTF_COMPRESSION_BAD\r\n");
         return false;
     }
 
@@ -165,7 +166,7 @@ bool valid_tftf_section(tftf_section_descriptor * section,
         if ((other_section->section_type != TFTF_SECTION_END) &&
             (!((other_section_end < section_start) ||
             (other_section_start >= section_end)))) {
-            dbgprint("BRE_TFTF_COLLISION");
+            dbgprint("BRE_TFTF_COLLISION\r\n");
             return false;
         }
     }
@@ -180,7 +181,7 @@ bool valid_tftf_section(tftf_section_descriptor * section,
  *
  * @returns True if valid TFTF header, false otherwise
  */
-bool valid_tftf_header(tftf_header * header) {
+bool valid_tftf_header(const tftf_header * header) {
     tftf_section_descriptor * section;
     bool section_contains_start = false;
     bool end_of_sections = false;
@@ -189,13 +190,13 @@ bool valid_tftf_header(tftf_header * header) {
     /* Verify the sentinel */
     for (i = 0; i < TFTF_SENTINEL_SIZE; i++) {
         if (header->sentinel_value[i] != tftf_sentinel[i]) {
-            dbgprint("BRE_TFTF_SENTINEL");
+            dbgprint("BRE_TFTF_SENTINEL\r\n");
             return false;
         }
     }
 
     if (header->header_size != TFTF_HEADER_SIZE) {
-        dbgprint("BRE_TFTF_HEADER_SIZE");
+        dbgprint("BRE_TFTF_HEADER_SIZE\r\n");
         return false;
     }
 
@@ -210,13 +211,13 @@ bool valid_tftf_header(tftf_header * header) {
         }
     }
     if (!end_of_sections) {
-        dbgprint("BRE_TFTF_NO_TABLE_END");
+        dbgprint("BRE_TFTF_NO_TABLE_END\r\n");
         return false;
     }
 
     /* Verify that, if this TFTF has a start address, it falls in one of our code sections. */
     if ((header->start_location != 0) && !section_contains_start) {
-        dbgprint("BRE_TFTF_START_NOT_IN_CODE");
+        dbgprint("BRE_TFTF_START_NOT_IN_CODE\r\n");
         return false;
     }
 
@@ -227,7 +228,7 @@ bool valid_tftf_header(tftf_header * header) {
     if (!is_constant_fill((uint8_t *)section,
                           (uint32_t)&header[1] - (uint32_t)section,
                           0x00)) {
-        dbgprint("BRE_TFTF_NON_ZERO_PAD");
+        dbgprint("BRE_TFTF_NON_ZERO_PAD\r\n");
         return false;
     }
 
@@ -249,4 +250,116 @@ uint8_t get_section_index(uint8_t section_type, tftf_section_descriptor *section
         section++;
     }
     return index_count;
+}
+
+int validate_image_signature(const tftf_header *tf_header, uint16_t *secureIndex)
+{
+    tftf_section_descriptor *section;
+    uint32_t unipro_mid = 0;
+    uint32_t unipro_pid = 0;
+    uint32_t ara_vid;
+    uint32_t ara_pid;
+    uint16_t sIndex;
+
+    crypto_init();
+
+    memcpy(&tftf.header, tf_header, sizeof(tftf_header));
+
+    tftf.crypto_state = CRYPTO_STATE_INIT;
+    tftf.contain_signature = false;
+
+    if(!valid_tftf_header(tf_header))
+    {
+        return -1;
+    }
+
+    get_chip_id(&unipro_mid, &unipro_pid);
+    get_board_id(&ara_vid, &ara_pid);
+    if (((tftf.header.unipro_mid != 0) &&
+         (tftf.header.unipro_mid != unipro_mid)) ||
+        ((tftf.header.unipro_pid != 0) &&
+         (tftf.header.unipro_pid != unipro_pid)) ||
+        ((tftf.header.ara_vid != 0) &&
+         (tftf.header.ara_vid != ara_vid)) ||
+        ((tftf.header.ara_pid != 0) &&
+         (tftf.header.ara_pid != ara_pid))) {
+        return -1;
+    }
+
+    /*
+     * Process the TFTF sections
+     */
+    section = &tftf.header.sections[0];
+    while(1) {
+        if ((uint32_t)section - (uint32_t)&tftf.header >= TFTF_HEADER_SIZE) {
+            return -1;
+        }
+
+        if (section->section_type == TFTF_SECTION_END) {
+            break;
+        }
+
+        switch (section->section_type) {
+        case TFTF_SECTION_SIGNATURE:
+            tftf.contain_signature = true;
+            /* fall through */
+        case TFTF_SECTION_CERTIFICATE:
+            if (tftf.crypto_state == CRYPTO_STATE_INIT) {
+                uint32_t header_hash_len;
+
+                /**
+                 * Found the first section of type 0x80 and above (i.e.,
+                 * signature or certificate), start by hashing all of the
+                 * header up to but not including the first unsigned section
+                 */
+                hash_start();
+                tftf.crypto_state = CRYPTO_STATE_HASHING;
+                header_hash_len = (uint32_t)section - (uint32_t)&tftf.header;
+                hash_update((unsigned char *)&tftf.header, header_hash_len);
+            }
+            break;
+
+        case TFTF_SECTION_COMPRESSED_CODE:
+        case TFTF_SECTION_COMPRESSED_DATA:
+            return -1;
+
+        default:
+            if (tftf.crypto_state == CRYPTO_STATE_HASHING) {
+                return -1;
+            }
+            break;
+        }
+        section++;
+    }
+
+    /* the header is validated */
+    section = &tftf.header.sections[0];
+    sIndex = get_section_index(TFTF_SECTION_RAW_CODE, section);
+    if(sIndex == TFTF_SECTION_END)
+    {
+        return -1;
+    }
+
+    section = &tftf.header.sections[sIndex];
+    hash_update((unsigned char *)section->section_load_address, section->section_length);
+
+    if (tftf.crypto_state == CRYPTO_STATE_HASHING) {
+        hash_final(tftf.hash);
+        tftf.crypto_state = CRYPTO_STATE_HASHED;
+    }
+
+    memcpy((uint8_t *)&tftf.signature, (uint8_t *)(section->section_load_address + section->section_length),
+            sizeof(tftf.signature));
+
+    if (tftf.crypto_state == CRYPTO_STATE_HASHED) {
+        if (verify_signature(tftf.hash, &tftf.signature) == 0) {
+            tftf.crypto_state = CRYPTO_STATE_VERIFIED;
+        } else {
+            sIndex = TFTF_SECTION_END;
+            return -1;
+        }
+    }
+
+    *secureIndex = sIndex;
+    return 0;
 }

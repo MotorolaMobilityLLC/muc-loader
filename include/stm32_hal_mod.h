@@ -84,5 +84,6 @@ int program_flash_data(uint32_t start, uint32_t size, uint8_t *data);
 int program_flash_lock(void);
 int program_flash_unlock(void);
 int program_flash_dword(const uint64_t *dword);
+uint32_t mod_get_tftf_addr(void);
 
 #endif /* __STM32_HAL_MOD_H */

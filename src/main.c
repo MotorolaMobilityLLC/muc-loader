@@ -39,7 +39,9 @@
 #include <greybus.h>
 #include <version.h>
 #include <boot_main.h>
+#include "crypto.h"
 #include "datalink.h"
+#include "tftf.h"
 
 #include <stm32_hal_mod.h>
 
@@ -117,6 +119,11 @@ void Boot2Partition(int pIndex)
   Function_Pointer  pJumpToFunction;
   uint32_t jumpAddress;
   uint32_t imageAddress;
+#if (CONFIG_MOD_SIGNATURE_VALIDATION == y)
+  uint16_t sIndex = 0;
+
+  tftf_header *tf_header = (tftf_header *)(mod_get_tftf_addr());
+#endif
 
   if(mmap[pIndex].pname == NULL)
   {
@@ -135,6 +142,19 @@ void Boot2Partition(int pIndex)
   if((jumpAddress >= mmap[pIndex].partition_start_address)
 		&& (jumpAddress <= mmap[pIndex].partition_end_address))
   {
+#if (CONFIG_MOD_SIGNATURE_VALIDATION == y)
+    if(!valid_tftf_header(tf_header))
+    {
+      dbgprint("valid_tftf_header failed\r\n");
+      return;
+    }
+
+    if(validate_image_signature(tf_header, &sIndex))
+    {
+      dbgprint("validate_image_signature failed\r\n");
+      return;
+    }
+#endif
     __set_PRIMASK(0);
 
     /* Initialize the Stack Pointer */
@@ -227,6 +247,7 @@ int main(void)
 
   switch(bootState) {
   case BOOT_STATE_NORMAL:
+    MX_USART_UART_Init();
     Boot2Partition(BOOT_PARTITION_INDEX);
     flash_reason = FLASH_REASON_BOOTFAIL;
   case BOOT_STATE_REQUEST_FLASH:

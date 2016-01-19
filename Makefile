@@ -5,6 +5,7 @@ DEP_DIR      = dep
 INC_DIR      = include
 SRC_DIR      = src
 CFG_DIR      = configs
+MAN_DIR      = manifests
 
 include $(TOPDIR)/.config
 
@@ -77,6 +78,8 @@ CSRCS      += debug.c \
 	      datalink.c \
 	      es3_unipro.c \
 	      tftf.c \
+	      crypto.c \
+	      public_keys.c \
 	      $(CHIPSET_LC)_muc.c \
 	      $(CHIPSET_LC)_mod_device.c \
 	      $(CHIPSET_LC)_hal_mod.c
@@ -101,6 +104,7 @@ VPATH      = ./src
 VPATH     += $(HAL_DIR)/Src
 VPATH     += $(DEV_DIR)/Source/
 VPATH     += $(CFG_DIR)/$(CONFIG_MOD_TYPE)/src
+VPATH     += $(MAN_DIR)/
 
 LIBS       = -L$(CMSIS_DIR)/Lib
 

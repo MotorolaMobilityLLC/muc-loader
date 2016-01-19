@@ -1,3 +1,30 @@
+# Copyright (c) 2016 Motorola.
+# All rights reserved.
+#
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions are met:
+# 1. Redistributions of source code must retain the above copyright notice,
+# this list of conditions and the following disclaimer.
+# 2. Redistributions in binary form must reproduce the above copyright notice,
+# this list of conditions and the following disclaimer in the documentation
+# and/or other materials provided with the distribution.
+# 3. Neither the name of the copyright holder nor the names of its
+# contributors may be used to endorse or promote products derived from this
+# software without specific prior written permission.
+#
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+# AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
+# THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
+# PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR
+# CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+# EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+# PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS;
+# OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
+# WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
+# OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
+# ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+#
+#
 TOPDIR := ${shell pwd}
 
 OUT_DIR      = out
@@ -8,6 +35,7 @@ CFG_DIR      = configs
 MAN_DIR      = manifests
 
 include $(TOPDIR)/.config
+include $(TOPDIR)/Make.defs
 
 CUBE_DIR         = $(CONFIG_CUBE_DIR)
 CHIPSET          = $(CONFIG_CHIPSET)
@@ -37,6 +65,7 @@ ifeq ($(CONFIG_DEBUG),y)
 DEFS      += -D_DEBUG
 endif
 
+
 # core version represents the slego part configuration
 CONFIG_ROOT_VERSION ?= 0
 
@@ -46,6 +75,12 @@ DEFS      += -DMOD_BOARDID_VID=$(CONFIG_ARCH_BOARDID_VID)
 DEFS      += -DVECT_TAB_SRAM
 ifeq ($(CONFIG_SLAVE_APBE),y)
 DEFS      += -DMOD_SLAVE_APBE
+endif
+# do we set the interrupt vector in flash or ram
+# default is to run from ram (normal bootloader
+# behavior)
+ifneq ($(CONFIG_RUN_FROM_FLASH),y)
+ DEFS      += -DVECT_TAB_SRAM
 endif
 
 INCS       = -I$(HAL_DIR)/Inc/
@@ -103,7 +138,8 @@ CSRCS      += $(CHIPSET_LC)_hal_rcc.c \
               $(CHIPSET_LC)_hal_uart_ex.c \
               $(CHIPSET_LC)_hal_pwr_ex.c
 
-SSRCS       = startup_$(TARGET_DEVICE_LC).s
+# STARTUP_S should be defined in the product Make.defs file
+SSRCS       = $(STARTUP_S)
 
 VPATH      = ./src
 VPATH     += $(HAL_DIR)/Src
@@ -116,9 +152,11 @@ LIBS       = -L$(CMSIS_DIR)/Lib
 TARGET       = boot_$(CONFIG_MOD_TYPE)
 
 # Linker flags
-LDFLAGS    = -Wl,--gc-sections -g -Wl,-Map=$(OUT_DIR)/$(TARGET).map $(LIBS) -T$(SRC_DIR)/$(TARGET_DEVICE_LC).ld
-#
-# # Enable Semihosting
+LDFLAGS    = -Wl,--gc-sections -g
+LDFLAGS   += -Wl,-Map=$(OUT_DIR)/$(TARGET).map
+LDFLAGS   += $(LIBS) -T$(CFG_DIR)/$(CONFIG_MOD_TYPE)/scripts/$(LDSCRIPT)
+
+# Enable Semihosting
 LDFLAGS   += --specs=rdimon.specs -lc -lrdimon
 
 OBJS    = $(addprefix $(OUT_DIR)/,$(CSRCS:.c=.o)) $(addprefix $(OUT_DIR)/,$(SSRCS:.s=.o))

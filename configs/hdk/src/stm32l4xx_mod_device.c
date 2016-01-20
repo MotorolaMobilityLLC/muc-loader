@@ -40,10 +40,7 @@ void mods_gpio_clk_enable(void)
 {
   /* GPIO Ports Clock Enable */
 
-  /* For USART */
-   __GPIOA_CLK_ENABLE();
-
-  /* For GPIOs */
+  __GPIOA_CLK_ENABLE();
   __GPIOB_CLK_ENABLE();
   __GPIOC_CLK_ENABLE();
 }
@@ -61,10 +58,10 @@ void device_gpio_init(void)
 
   /* Attach Detection */
   memset(&GPIO_InitStruct, 0, sizeof(GPIO_InitStruct));
-  GPIO_InitStruct.Pin = GPIO_MODS_SL_BPLUS_EN_PIN;
+  GPIO_InitStruct.Pin = GPIO_MODS_SL_BPLUS_AIN_PIN;
   GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
-  GPIO_InitStruct.Pull = GPIO_PULLUP;
-  HAL_GPIO_Init(GPIO_MODS_SL_BPLUS_EN_PORT, &GPIO_InitStruct);
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  HAL_GPIO_Init(GPIO_MODS_SL_BPLUS_AIN_PORT, &GPIO_InitStruct);
 }
 
 PinState mods_force_flash_get(void)
@@ -83,7 +80,7 @@ bool mod_dev_is_attached(void)
 {
     PinState ps_attached;
 
-    ps_attached = HAL_GPIO_ReadPin(GPIO_MODS_SL_BPLUS_EN_PORT,
-                                   GPIO_MODS_SL_BPLUS_EN_PIN);
+    ps_attached = HAL_GPIO_ReadPin(GPIO_MODS_SL_BPLUS_AIN_PORT,
+                                   GPIO_MODS_SL_BPLUS_AIN_PIN);
     return (ps_attached == PIN_SET);
 }

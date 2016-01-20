@@ -40,29 +40,29 @@
 #include <stm32l4xx_hal_flash.h>
 #include <stm32l4xx_hal_uart.h>
 
-#define STM32_UID_BASE       0x1fff7590
+#define STM32_UID_BASE                0x1fff7590
 
-#define BOARD_REVISION      (MOD_BOARDID_PID & 0x0000FFFF)
+#define BOARD_REVISION                (MOD_BOARDID_PID & 0x0000FFFF)
 
-#define GPIO_MODS_SL_BPLUS_EN_PORT GPIOA
-#define GPIO_MODS_SL_BPLUS_EN_PIN  GPIO_PIN_12
+#define GPIO_MODS_SL_BPLUS_AIN_PORT   GPIOC
+#define GPIO_MODS_SL_BPLUS_AIN_PIN    GPIO_PIN_5
 
-#define GPIO_PORT_WAKE_N     GPIOB
-#define GPIO_PIN_WAKE_N      GPIO_PIN_1
+#define GPIO_PORT_WAKE_N              GPIOB
+#define GPIO_PIN_WAKE_N               GPIO_PIN_0
 
-#define GPIO_PORT_RFR        GPIOB
-#define GPIO_PIN_RFR         GPIO_PIN_0
+#define GPIO_PORT_RFR                 GPIOC
+#define GPIO_PIN_RFR                  GPIO_PIN_2
 
-#define GPIO_PORT_MUC_INT    GPIOA
-#define GPIO_PIN_MUC_INT     GPIO_PIN_11
+#define GPIO_PORT_MUC_INT             GPIOC
+#define GPIO_PIN_MUC_INT              GPIO_PIN_13
 
-#define GPIO_PORT_SPI_CS_N   GPIOB
-#define GPIO_PIN_SPI_CS_N    GPIO_PIN_12
+#define GPIO_PORT_SPI_CS_N            GPIOB
+#define GPIO_PIN_SPI_CS_N             GPIO_PIN_12
 
-#define MOD_TO_BASE_SPI      SPI2
-#define MOD_DEBUG_USART      USART1
+#define MOD_TO_BASE_SPI               SPI2
+#define MOD_DEBUG_USART               USART3
 
-#define GPIO_PORT_FORCE_FLASH    GPIOB
-#define GPIO_PIN_FORCE_FLASH     GPIO_PIN_9
+#define GPIO_PORT_FORCE_FLASH         GPIOB
+#define GPIO_PIN_FORCE_FLASH          GPIO_PIN_9
 
 #endif /* __STM32L4XX_MOD_DEVICE_H */

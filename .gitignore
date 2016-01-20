@@ -1,5 +1,5 @@
-./dep/*
-./out/*
+/dep/*
+/out/*
 *.d
 *.elf
 *.lst

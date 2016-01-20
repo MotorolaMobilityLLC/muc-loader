@@ -119,7 +119,7 @@ void Boot2Partition(int pIndex)
   Function_Pointer  pJumpToFunction;
   uint32_t jumpAddress;
   uint32_t imageAddress;
-#if (CONFIG_MOD_SIGNATURE_VALIDATION == y)
+#ifdef CONFIG_MOD_SIGNATURE_VALIDATION
   uint16_t sIndex = 0;
 
   tftf_header *tf_header = (tftf_header *)(mod_get_tftf_addr());
@@ -142,7 +142,7 @@ void Boot2Partition(int pIndex)
   if((jumpAddress >= mmap[pIndex].partition_start_address)
 		&& (jumpAddress <= mmap[pIndex].partition_end_address))
   {
-#if (CONFIG_MOD_SIGNATURE_VALIDATION == y)
+#ifdef CONFIG_MOD_SIGNATURE_VALIDATION
     if(!valid_tftf_header(tf_header))
     {
       dbgprint("valid_tftf_header failed\r\n");

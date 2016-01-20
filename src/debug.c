@@ -53,7 +53,7 @@ void __attribute__((optimize("O1"))) dbgputc(int x) {
      * FIXME: replace with chip delay function, current chip delay function fails
      *        with unresponsive systick counter.
     */
-    *(volatile uint32_t*)(UART_TDR_REG_ADDRESS) = x;
+    MOD_DEBUG_USART->TDR = x;
     while (count < 3200) {
         y = 1000/count + 1;
         count ++;

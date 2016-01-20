@@ -35,7 +35,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 #include <greybus.h>
-#include <muc_config.h>
+#include <stm32_mod_device.h>
 
 #define getreg32(a)         (*(volatile uint32_t *)(a))
 

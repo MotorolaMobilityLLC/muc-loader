@@ -31,8 +31,6 @@
 #include "stm32l4xx_hal.h"
 #include "stm32_hal_mod.h"
 
-#include <muc_config.h>
-
 #include <stm32_mod_device.h>
 
 #ifdef _DEBUG

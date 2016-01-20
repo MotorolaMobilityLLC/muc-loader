@@ -26,7 +26,6 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <muc_config.h>
 #include <stm32_hal_mod.h>
 #include <stm32_mod_device.h>
 

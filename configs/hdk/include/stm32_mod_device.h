@@ -36,10 +36,13 @@
 #include <stdint.h>
 #include <greybus.h>
 
-#define STM32_UID_BASE       0x1fff7590     /* 0x1fff7590-0x1fff759b: UID */
+#include <stm32l4xx_hal.h>
+#include <stm32l4xx_hal_flash.h>
+#include <stm32l4xx_hal_uart.h>
+
+#define STM32_UID_BASE       0x1fff7590
 
 #define BOARD_REVISION      (MOD_BOARDID_PID & 0x0000FFFF)
-#define STM32_UID_BASE       0x1fff7590
 
 #define GPIO_MODS_SL_BPLUS_EN_PORT GPIOA
 #define GPIO_MODS_SL_BPLUS_EN_PIN  GPIO_PIN_12
@@ -58,8 +61,6 @@
 
 #define MOD_TO_BASE_SPI      SPI2
 #define MOD_DEBUG_USART      USART1
-
-#define UART_TDR_REG_ADDRESS 0x40013828
 
 #define GPIO_PORT_FORCE_FLASH    GPIOB
 #define GPIO_PIN_FORCE_FLASH     GPIO_PIN_9

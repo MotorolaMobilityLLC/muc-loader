@@ -31,6 +31,7 @@ SIZE       = $(PREFIX)-size
 DEFS       = -D$(TARGET_DEVICE)
 DEFS      += -DUSE_HAL_DRIVER
 DEFS      += -DUSE_DBPRINTF
+DEFS      += $(SIG_VALIDATION)
 
 ifeq ($(CONFIG_DEBUG),y)
 DEFS      += -D_DEBUG

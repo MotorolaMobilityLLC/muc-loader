@@ -56,6 +56,7 @@ INCS      += -I$(SRC_DIR)/
 
 CFLAGS     = -Wall -g -std=c99 -Os
 CFLAGS    += -mlittle-endian -mcpu=cortex-m4 -march=armv7e-m -mthumb
+CFLAGS    += -include $(OUT_DIR)/include/config.h
 ifeq ($(CONFIG_ARCH_HAS_HW_FLOAT),y)
  CFLAGS    += -mfpu=fpv4-sp-d16 -mfloat-abi=hard
 else

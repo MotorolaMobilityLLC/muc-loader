@@ -46,6 +46,7 @@
 
 #define GPIO_MODS_SL_BPLUS_AIN_PORT   GPIOC
 #define GPIO_MODS_SL_BPLUS_AIN_PIN    GPIO_PIN_5
+#define EXTI_MODS_SL_BPLUS_AIN_IRQ    EXTI1_IRQn
 
 #define GPIO_PORT_WAKE_N              GPIOB
 #define GPIO_PIN_WAKE_N               GPIO_PIN_0

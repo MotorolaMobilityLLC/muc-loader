@@ -59,9 +59,12 @@ void device_gpio_init(void)
   /* Attach Detection */
   memset(&GPIO_InitStruct, 0, sizeof(GPIO_InitStruct));
   GPIO_InitStruct.Pin = GPIO_MODS_SL_BPLUS_AIN_PIN;
-  GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
+  GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING_FALLING;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(GPIO_MODS_SL_BPLUS_AIN_PORT, &GPIO_InitStruct);
+
+  HAL_NVIC_SetPriority(EXTI_MODS_SL_BPLUS_AIN_IRQ, 1, 0);
+  HAL_NVIC_EnableIRQ(EXTI_MODS_SL_BPLUS_AIN_IRQ);
 }
 
 PinState mods_force_flash_get(void)

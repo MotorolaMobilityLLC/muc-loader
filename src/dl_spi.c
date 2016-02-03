@@ -334,13 +334,6 @@ void setup_exchange(void)
 {
   uint32_t buf_size;
 
-#if !defined(CONFIG_NO_FLASH)
-  if (!mod_dev_is_attached()) {
-    dbgprint("Detached\r\n");
-    HAL_NVIC_SystemReset();
-  }
-#endif
-
   /* Start the Full Duplex Communication process */
   /* While the SPI in TransmitReceive process, user can transmit data through
      "aTxBuffer" buffer & receive data through "aRxBuffer" */

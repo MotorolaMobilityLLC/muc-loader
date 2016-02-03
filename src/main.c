@@ -81,17 +81,7 @@ static const struct memory_map mmap[MMAP_PARTITION_NUM] = {
   {0, 0, 0},
 };
 
-static void Error_Handler(void);
-
-/* USER CODE BEGIN PFP */
-/* Private function prototypes -----------------------------------------------*/
-static int process_network_msg(struct mods_spi_msg *spi_msg);
-void Boot2Partition(int pIndex);
-/* USER CODE END PFP */
-
-/* USER CODE BEGIN 0 */
-/* Private functions ---------------------------------------------------------*/
-void Boot2Partition(int pIndex)
+static void Boot2Partition(int pIndex)
 {
   Function_Pointer  pJumpToFunction;
   uint32_t jumpAddress;
@@ -172,6 +162,23 @@ enum BootState CheckFlashMode(void)
   return bootState;
 }
 
+static void _init(void)
+{
+  /* Configure the system clock */
+  SystemClock_Config();
+
+  /* Initialize all configured peripherals */
+  MX_GPIO_Init();
+  MX_DMA_Init();
+  MX_SPI_Init();
+  MX_USART_UART_Init();
+
+  /* Config SPI NSS in interrupt mode */
+  SPI_NSS_INT_CTRL_Config();
+
+  dl_init();
+}
+
 int main(void)
 {
   enum BootState bootState = CheckFlashMode();
@@ -204,25 +211,19 @@ int main(void)
   /* Reset of all peripherals, Initializes the Flash interface and the Systick. */
   HAL_Init();
 
-  /* Configure the system clock */
-  SystemClock_Config();
-
-  /* Initialize all configured peripherals */
-  MX_GPIO_Init();
-  MX_DMA_Init();
-  MX_SPI_Init();
-  MX_USART_UART_Init();
+  _init();
 
   dbgprint("\r\n--[MuC Loader v" CONFIG_VERSION_STRING ":" CONFIG_VERSION_BUILD "]\r\n");
   dbgprintx32("-Flash Mode (", flash_reason, ")\r\n");
 
-  /* Config SPI NSS in interrupt mode */
-  SPI_NSS_INT_CTRL_Config();
-
-
-  dl_init();
-
   while (1) {
+    if (!mod_dev_is_attached()) {
+      dbgprint("Detached - STOP2\r\n");
+      HAL_PWREx_EnterSTOP2Mode(PWR_STOPENTRY_WFI);
+      _init();
+      dbgprint("Back\r\n");
+    }
+
     setup_exchange();
   }
 }
@@ -242,7 +243,6 @@ int get_board_id(uint32_t *vend_id, uint32_t *prod_id)
 
 int get_chip_id(uint32_t *mfg_id, uint32_t *prod_id)
 {
-
   if (mfg_id) {
     /* MIPI Manufacturer ID from http://mid.mipi.org/ */
     *mfg_id = 0x0104;

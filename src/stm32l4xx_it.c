@@ -76,6 +76,16 @@ void DMA1_Channel5_IRQHandler(void)
   HAL_DMA_IRQHandler(&hdma_spi2_tx);
 }
 
+void EXTI1_IRQHandler(void)
+{
+  HAL_GPIO_EXTI_IRQHandler(GPIO_PIN_1);
+}
+
+void EXTI3_IRQHandler(void)
+{
+  HAL_GPIO_EXTI_IRQHandler(GPIO_PIN_3);
+}
+
 /**
   * @brief  This function handles EXTI15_10 interrupt request.
   * @param  None

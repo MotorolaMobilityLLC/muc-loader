@@ -36,8 +36,6 @@
 #include <stdint.h>
 #include <greybus.h>
 
-#define FLASHMODE_FLAG_PAGE     (FLASH_BASE + FLASH_SIZE - FLASH_PAGE_SIZE)
-
 void ErasePage(uint32_t pageAddress);
 int flash_erase(uint32_t start_addr, uint32_t size);
 int program_flash_data(uint32_t start, uint32_t size, uint8_t *data);

@@ -38,6 +38,7 @@
 #include "stm32l4xx_hal.h"
 #include "tftf.h"
 #include "stm32l4xx_flash.h"
+#include "stm32_hal_mod.h"
 
 /* Greybus FirmWare protocol version we support */
 #define GB_FIRMWARE_VERSION_MAJOR   0x00

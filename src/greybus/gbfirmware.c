@@ -39,6 +39,7 @@
 #include "tftf.h"
 #include "stm32l4xx_flash.h"
 #include "stm32_hal_mod.h"
+#include "spi_flash_write.h"
 
 /* Greybus FirmWare protocol version we support */
 #define GB_FIRMWARE_VERSION_MAJOR   0x00
@@ -47,6 +48,7 @@
 #define CPORT_POLLING_TIMEOUT       512
 
 #define MUCLOADER_BASE_ADDR     FLASH_BASE
+#define MUC_SPI_FLASH_STAGE         2
 
 static bool tftf_header_received = false;
 static uint8_t tftf_buff[TFTF_HEADER_SIZE];
@@ -114,6 +116,12 @@ static void gbfw_next_stage(void)
     }
 }
 
+#ifdef CONFIG_APBE_FLASH
+static bool gbfw_is_apbe_flash_stage(void)
+{
+   return _gbfw_stage == MUC_SPI_FLASH_STAGE ? true : false;
+}
+#endif
 
 static int gbfw_firmware_size_response(gb_operation_header *head, void *data,
                                        uint32_t len)
@@ -204,21 +212,28 @@ static int gbfw_get_firmware_response(gb_operation_header *header, void *data,
         fw_flash_data.fw_remaining_size = firmware_size_response.size - TFTF_HEADER_SIZE;
         fw_flash_data.fw_offset = 0;
         fw_flash_data.new_payload_size = 0;
+#ifdef CONFIG_APBE_FLASH
+        if (gbfw_is_apbe_flash_stage()) {
+             dbgprint("spi flash header\r\n");
+             spi_write_to_flash_header(&spi_write_ops, data);
+        } else
+#endif
+        {
+            flash_erase(fw_flash_data.fw_flash_addr, fw_flash_data.fw_remaining_size);
+            set_flashing_flag();
 
-        flash_erase(fw_flash_data.fw_flash_addr, fw_flash_data.fw_remaining_size);
-        set_flashing_flag();
+            /* program the first packet */
+            data_ptr += sizeof(tftf_header);
 
-        /* program the first packet */
-        data_ptr += sizeof(tftf_header);
+            flash_addr = fw_flash_data.fw_flash_addr + fw_flash_data.fw_offset;
+            flash_data_size = fw_flash_data.fw_request_size - TFTF_HEADER_SIZE;
 
-        flash_addr = fw_flash_data.fw_flash_addr + fw_flash_data.fw_offset;
-        flash_data_size = fw_flash_data.fw_request_size - TFTF_HEADER_SIZE;
+            dbgprint("FLADR:");
+            dbgprinthex32(flash_addr);
+            dbgprint("\r\n");
 
-        dbgprint("FLADR:");
-        dbgprinthex32(flash_addr);
-        dbgprint("\r\n");
-
-        program_flash_data(flash_addr, flash_data_size, data_ptr);
+            program_flash_data(flash_addr, flash_data_size, data_ptr);
+         }
 
         fw_flash_data.fw_offset += (fw_flash_data.fw_request_size - TFTF_HEADER_SIZE);
         fw_flash_data.fw_remaining_size -= (fw_flash_data.fw_request_size - TFTF_HEADER_SIZE);
@@ -235,18 +250,26 @@ static int gbfw_get_firmware_response(gb_operation_header *header, void *data,
                  pl_data_size - (pl_data_size % sizeof(uint64_t));
     } else {
         tf_header = (tftf_header *)tftf_buff;
+#ifdef CONFIG_APBE_FLASH
+        if (gbfw_is_apbe_flash_stage()) {
+             spi_write_to_flash_data(&spi_write_ops, data,
+                     fw_flash_data.new_payload_size);
+             flash_data_size = fw_flash_data.new_payload_size;
+        } else
+#endif
+        {
+            flash_addr = fw_flash_data.fw_flash_addr + fw_flash_data.fw_offset;
+            flash_data_size = fw_flash_data.new_payload_size;
 
-        flash_addr = fw_flash_data.fw_flash_addr + fw_flash_data.fw_offset;
-        flash_data_size = fw_flash_data.new_payload_size;
+            dbgprint("FLADR:");
+            dbgprinthex32(flash_addr);
+            dbgprint("\r\n");
+            dbgprint("PLSZ:");
+            dbgprinthex32(flash_data_size);
+            dbgprint("\r\n");
 
-        dbgprint("FLADR:");
-        dbgprinthex32(flash_addr);
-        dbgprint("\r\n");
-        dbgprint("PLSZ:");
-        dbgprinthex32(flash_data_size);
-        dbgprint("\r\n");
-
-        program_flash_data(flash_addr, flash_data_size, data_ptr);
+            program_flash_data(flash_addr, flash_data_size, data_ptr);
+        }
 
         fw_flash_data.fw_offset += flash_data_size;
         fw_flash_data.fw_remaining_size -= flash_data_size;
@@ -272,6 +295,10 @@ static int gbfw_get_firmware_response(gb_operation_header *header, void *data,
         gbfw_get_firmware(fw_flash_data.fw_offset + TFTF_HEADER_SIZE,
                           fw_flash_data.new_payload_size);
     } else {
+#ifdef CONFIG_APBE_FLASH
+        if (gbfw_is_apbe_flash_stage())
+            spi_write_to_flash_finish(&spi_write_ops);
+#endif
         gbfw_next_stage();
     }
     return 0;
@@ -307,7 +334,7 @@ static int gbfw_ready_to_boot(uint8_t status)
 }
 
 static int gbfw_ready_to_boot_response(gb_operation_header *header, void *data,
-                                       uint32_t len) 
+                                       uint32_t len)
 {
     if (header->status) {
         dbgprint("gbfw_ready_to_boot_response(): got error status\r\n");

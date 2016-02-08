@@ -57,6 +57,8 @@ extern PinState mods_rfr_get(void);
 extern void mods_wake_n_set(PinState pstate);
 extern PinState mods_wake_n_get(void);
 extern void mods_muc_int_set(PinState pstate);
+extern PinState mods_muc_get_spi_sel(void);
+extern void mods_muc_spi_sel(PinState pstate);
 extern PinState mods_muc_int_get(void);
 extern void SPI_NSS_INT_CTRL_Config(void);
 
@@ -65,10 +67,24 @@ extern void device_gpio_init(void);
 extern void device_console_init(void);
 extern void device_console_deinit(void);
 extern void device_spi_mod_init(SPI_HandleTypeDef *_hspi);
+extern void device_spi_flash_init(SPI_HandleTypeDef *_hspi);
 extern PinState mods_force_flash_get(void);
 extern void mod_dev_base_spi_reset(void);
 /* Is the mod currently attached to a base? */
 extern bool mod_dev_is_attached(void);
+
+/* apbe reset */
+extern void apbe_reset(void);
+
+/* spi flash init */
+extern void MX_SPI_FLASH_Init(void);
+
+/* spi flash selection gpio get/set functions*/
+extern PinState mods_muc_get_spi_sel(void);
+extern void mods_muc_set_spi_sel(PinState ps);
+
+/* set spi flash interface chip select PIN */
+extern void mods_muc_set_spi1_cs(PinState ps);
 
 /* from main.c */
 extern void SystemClock_Config(void);

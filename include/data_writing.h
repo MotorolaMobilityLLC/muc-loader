@@ -1,5 +1,5 @@
-/**
- * Copyright (c) 2015 Google Inc.
+/*
+ * Copyright (c) 2016 Motorola Mobility, LLC.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -25,57 +25,29 @@
  * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
+#ifndef __COMMON_INCLUDE_DATA_WRITING_H
+#define __COMMON_INCLUDE_DATA_WRITING_H
 
-#include <stddef.h>
 #include <stdint.h>
-#include <stdbool.h>
 
-/**
- * @brief Determine if a value is a power of 2
- *
- * @param x the value to check.
- *
- * @returns true if it is a power of 2, false otherwise
- */
-bool is_power_of_2(uint32_t x);
+typedef int (*data_writing_init)(void);
+typedef int (*data_writing_erase_all)(void);
+typedef int (*data_writing_erase)(uint32_t dst, uint32_t length);
+typedef int (*data_writing_write)(uint32_t dst, void *src, uint32_t length);
+typedef int (*data_writing_verify)(uint32_t dst, void *src, uint32_t length);
+typedef int (*data_writing_finish)(void);
+typedef size_t (*data_writing_get_capacity)(void);
+typedef size_t (*data_writing_get_erase_size)(void);
 
-/**
- * @brief Determine if an address is block-aligned
- *
- * @param location The address to check
- * @param block_size The size of a block (must be a power of 2)
- *
- * @returns true if it is block-aligned, false otherwise
- */
-bool block_aligned(uint32_t address, uint32_t block_size);
+typedef struct {
+    data_writing_init init;
+    data_writing_erase_all erase_all;
+    data_writing_erase erase;
+    data_writing_write write;
+    data_writing_verify verify;
+    data_writing_finish finish;
+    data_writing_get_capacity get_capacity;
+    data_writing_get_erase_size get_erase_size;
+} data_write_ops;
 
-/**
- * @brief Round up an address to the next block boundary
- *
- * @param location The address to check
- * @param block_size The size of a block (must be a power of 2)
- *
- * @returns A block-aligned address
- */
-uint32_t next_block_boundary(uint32_t address, uint32_t block_size);
-
-/**
- * @brief Check a range of bytes for a constant fill
- *
- * @param buf Points to the start of the region to check
- * @param len The number of bytes to check
- * @param fill_byte The constant byte to check against
- *
- * @returns True if the buffer is filled with a constan byte, false otherwise.
- */
-bool is_constant_fill(uint8_t * buf, uint32_t len, uint8_t fill_byte);
-
-void delay(volatile uint32_t steps);
-
-#define TIMING_BUG_DELAY_LENGTH (0xfffff)
-
-#define DISJOINT_OR(x, y)   (!x ? y : x)
-
-#ifndef MIN
-# define MIN(a, b)  (((a) < (b)) ? (a) : (b))
-#endif
+#endif /* __COMMON_INCLUDE_DATA_WRITING_H */

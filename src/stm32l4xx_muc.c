@@ -136,11 +136,12 @@ void MX_DMA_Init(void)
   HAL_NVIC_SetPriority(DMA1_Channel5_IRQn, 4, 0);
   HAL_NVIC_EnableIRQ(DMA1_Channel5_IRQn);
 
+  device_dma_init();
 }
 
-/** Configure pins as 
-        * Analog 
-        * Input 
+/** Configure pins as
+        * Analog
+        * Input
         * Output
         * EVENT_OUT
         * EXTI

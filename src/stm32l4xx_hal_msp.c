@@ -1,7 +1,7 @@
 /**
   ******************************************************************************
   * File Name          : stm32l4xx_hal_msp.c
-  * Description        : This file provides code for the MSP Initialization 
+  * Description        : This file provides code for the MSP Initialization
   *                      and de-Initialization codes.
   ******************************************************************************
   *
@@ -35,8 +35,16 @@
 #include "stm32l4xx_hal.h"
 #include "stm32l4xx_hal_uart.h"
 
+#include <stm32_mod_device.h>
+#include <stm32_hal_mod.h>
+
 DMA_HandleTypeDef hdma_spi2_rx;
 DMA_HandleTypeDef hdma_spi2_tx;
+
+#ifdef CONFIG_APBE_FLASH
+extern DMA_HandleTypeDef hdma_spi1_rx;
+extern DMA_HandleTypeDef hdma_spi1_tx;
+#endif
 
 /**
   * Initializes the Global MSP.
@@ -56,6 +64,7 @@ void HAL_MspInit(void)
 void HAL_SPI_MspInit(SPI_HandleTypeDef* hspi)
 {
   GPIO_InitTypeDef GPIO_InitStruct;
+
   if(hspi->Instance==SPI2)
   {
     /* Peripheral clock enable */
@@ -103,6 +112,63 @@ void HAL_SPI_MspInit(SPI_HandleTypeDef* hspi)
     __HAL_LINKDMA(hspi,hdmatx,hdma_spi2_tx);
 
   }
+#ifdef CONFIG_APBE_FLASH
+  if(hspi->Instance == MOD_TO_SPI_FLASH)
+  {
+    /* Peripheral clock enable */
+    __SPI1_CLK_ENABLE();
+
+    /**SPI1 GPIO Configuration
+    PA7     ------> SPI1_MOSI
+    PA6     ------> SPI1_MISO
+    PA5     ------> SPI1_NSS
+    PA4     ------> SPI1_SCK
+    */
+    memset(&GPIO_InitStruct, 0 , sizeof(GPIO_InitStruct));
+    GPIO_InitStruct.Pin = GPIO_PIN_5|GPIO_PIN_4|GPIO_PIN_6|GPIO_PIN_7;
+    GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
+    GPIO_InitStruct.Pull = GPIO_NOPULL;
+    GPIO_InitStruct.Speed = GPIO_SPEED_HIGH;
+    GPIO_InitStruct.Alternate = GPIO_AF5_SPI1;
+    HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
+
+    /*Configure GPIO pin : PA4 */
+    GPIO_InitStruct.Pin = GPIO_PIN_SPI1_CS_N;
+    GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+    GPIO_InitStruct.Pull = GPIO_NOPULL;
+    GPIO_InitStruct.Speed = GPIO_SPEED_HIGH;
+    HAL_GPIO_Init(GPIO_PORT_SPI1_CS_N, &GPIO_InitStruct);
+    mods_muc_set_spi1_cs(PIN_SET);
+
+    /* Peripheral DMA init*/
+    hdma_spi1_rx.Instance = DMA1_Channel2;
+    hdma_spi1_rx.Init.Request = DMA_REQUEST_1;
+    hdma_spi1_rx.Init.Direction = DMA_PERIPH_TO_MEMORY;
+    hdma_spi1_rx.Init.PeriphInc = DMA_PINC_DISABLE;
+    hdma_spi1_rx.Init.MemInc = DMA_MINC_ENABLE;
+    hdma_spi1_rx.Init.PeriphDataAlignment = DMA_PDATAALIGN_BYTE;
+    hdma_spi1_rx.Init.MemDataAlignment = DMA_MDATAALIGN_BYTE;
+    hdma_spi1_rx.Init.Mode = DMA_NORMAL;
+    hdma_spi1_rx.Init.Priority = DMA_PRIORITY_HIGH;
+    HAL_DMA_Init(&hdma_spi1_rx);
+
+    __HAL_LINKDMA(hspi,hdmarx,hdma_spi1_rx);
+
+    hdma_spi1_tx.Instance = DMA1_Channel3;
+    hdma_spi1_tx.Init.Request = DMA_REQUEST_1;
+    hdma_spi1_tx.Init.Direction = DMA_MEMORY_TO_PERIPH;
+    hdma_spi1_tx.Init.PeriphInc = DMA_PINC_DISABLE;
+    hdma_spi1_tx.Init.MemInc = DMA_MINC_ENABLE;
+    hdma_spi1_tx.Init.PeriphDataAlignment = DMA_PDATAALIGN_BYTE;
+    hdma_spi1_tx.Init.MemDataAlignment = DMA_MDATAALIGN_BYTE;
+    hdma_spi1_tx.Init.Mode = DMA_NORMAL;
+    hdma_spi1_tx.Init.Priority = DMA_PRIORITY_HIGH;
+    HAL_DMA_Init(&hdma_spi1_tx);
+
+    __HAL_LINKDMA(hspi,hdmatx,hdma_spi1_tx);
+
+  }
+#endif
 }
 
 void HAL_SPI_MspDeInit(SPI_HandleTypeDef* hspi)
@@ -124,6 +190,26 @@ void HAL_SPI_MspDeInit(SPI_HandleTypeDef* hspi)
     HAL_DMA_DeInit(hspi->hdmarx);
     HAL_DMA_DeInit(hspi->hdmatx);
   }
+#ifdef CONFIG_APBE_FLASH
+  if(hspi->Instance == MOD_TO_SPI_FLASH)
+  {
+    /* Peripheral clock disable */
+    __SPI1_CLK_DISABLE();
+
+
+    /**SPI1 GPIO Configuration
+    PA7     ------> SPI1_MOSI
+    PA6     ------> SPI1_MISO
+    PA5     ------> SPI1_NSS
+    PA4     ------> SPI1_SCK
+    */
+    HAL_GPIO_DeInit(GPIOA, GPIO_PIN_5|GPIO_PIN_4|GPIO_PIN_6|GPIO_PIN_7);
+
+    /* Peripheral DMA DeInit*/
+    HAL_DMA_DeInit(hspi->hdmarx);
+    HAL_DMA_DeInit(hspi->hdmatx);
+  }
+#endif
 }
 
 /************************ (C) COPYRIGHT STMicroelectronics *****END OF FILE****/

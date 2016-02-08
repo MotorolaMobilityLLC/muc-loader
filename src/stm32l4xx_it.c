@@ -40,6 +40,10 @@
 extern DMA_HandleTypeDef hdma_spi2_rx;
 extern DMA_HandleTypeDef hdma_spi2_tx;
 
+#ifdef CONFIG_APBE_FLASH
+extern DMA_HandleTypeDef hdma_spi1_rx;
+extern DMA_HandleTypeDef hdma_spi1_tx;
+#endif
 /******************************************************************************/
 /*            Cortex-M4 Processor Interruption and Exception Handlers         */
 /******************************************************************************/
@@ -67,7 +71,25 @@ void DMA1_Channel4_IRQHandler(void)
 {
   HAL_DMA_IRQHandler(&hdma_spi2_rx);
 }
+#ifdef CONFIG_APBE_FLASH
+/**
+/**
+* @brief This function handles DMA1 channel2 global interrupt.
+*/
+void DMA1_Channel2_IRQHandler(void)
+{
+  HAL_DMA_IRQHandler(&hdma_spi1_rx);
 
+}
+
+/**
+* @brief This function handles DMA1 channel3 global interrupt.
+*/
+void DMA1_Channel3_IRQHandler(void)
+{
+  HAL_DMA_IRQHandler(&hdma_spi1_tx);
+}
+#endif
 /**
 * @brief This function handles DMA1 channel5 global interrupt.
 */

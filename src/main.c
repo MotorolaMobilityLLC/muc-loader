@@ -171,7 +171,9 @@ static void _init(void)
   MX_GPIO_Init();
   MX_DMA_Init();
   MX_USART_UART_Init();
-
+#ifdef CONFIG_APBE_FLASH
+  spi_flash_hal_init();
+#endif
   /* Config SPI NSS in interrupt mode */
   SPI_NSS_INT_CTRL_Config();
 

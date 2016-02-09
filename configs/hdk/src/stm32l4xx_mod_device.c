@@ -45,6 +45,34 @@ void mods_gpio_clk_enable(void)
   __GPIOC_CLK_ENABLE();
 }
 
+void device_console_init(void)
+{
+    GPIO_InitTypeDef GPIO_InitStruct;
+
+    __USART3_CLK_ENABLE();
+
+    GPIO_InitStruct.Pin = GPIO_PIN_CONSOLE_TX;
+    GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
+    GPIO_InitStruct.Pull = GPIO_PULLUP;
+    GPIO_InitStruct.Speed = GPIO_SPEED_HIGH;
+    GPIO_InitStruct.Alternate = GPIO_AF7_USART3;
+    HAL_GPIO_Init(GPIO_PORT_CONSOLE_TX, &GPIO_InitStruct);
+
+    GPIO_InitStruct.Pin = GPIO_PIN_CONSOLE_RX;
+    GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
+    GPIO_InitStruct.Pull = GPIO_PULLUP;
+    GPIO_InitStruct.Speed = GPIO_SPEED_HIGH;
+    GPIO_InitStruct.Alternate = GPIO_AF7_USART3;
+    HAL_GPIO_Init(GPIO_PORT_CONSOLE_RX, &GPIO_InitStruct);
+}
+
+void device_console_deinit(void)
+{
+    __USART3_CLK_DISABLE();
+    HAL_GPIO_DeInit(GPIO_PORT_CONSOLE_TX, GPIO_PIN_CONSOLE_TX);
+    HAL_GPIO_DeInit(GPIO_PORT_CONSOLE_RX, GPIO_PIN_CONSOLE_RX);
+}
+
 void device_gpio_init(void)
 {
   GPIO_InitTypeDef GPIO_InitStruct;

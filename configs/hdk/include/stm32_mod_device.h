@@ -66,4 +66,10 @@
 #define GPIO_PORT_FORCE_FLASH         GPIOB
 #define GPIO_PIN_FORCE_FLASH          GPIO_PIN_9
 
+#define GPIO_PORT_CONSOLE_TX          GPIOC
+#define GPIO_PIN_CONSOLE_TX           GPIO_PIN_10
+
+#define GPIO_PORT_CONSOLE_RX          GPIOC
+#define GPIO_PIN_CONSOLE_RX           GPIO_PIN_11
+
 #endif /* __STM32L4XX_MOD_DEVICE_H */

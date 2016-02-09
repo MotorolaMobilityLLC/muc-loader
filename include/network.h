@@ -33,4 +33,5 @@
 
 extern int network_recv(const void *buf, size_t len);
 extern int network_send(uint32_t cport,  uint8_t *buf, size_t len, msg_sent_cb cb);
+extern uint16_t network_get_max_payload_size(void);
 #endif

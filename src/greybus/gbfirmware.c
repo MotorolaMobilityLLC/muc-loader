@@ -67,6 +67,7 @@ static int gbfw_ready_to_boot(uint8_t status);
 static int gbfw_get_version(uint32_t cportid, gb_operation_header *header)
 {
     uint8_t payload[2] = {GB_FIRMWARE_VERSION_MAJOR, GB_FIRMWARE_VERSION_MINOR};
+
     return greybus_send_response(cportid, header, GB_OP_SUCCESS, payload,
                                sizeof(payload), NULL);
 }
@@ -106,7 +107,6 @@ static void gbfw_next_stage(void)
     memset(&fw_flash_data, 0, sizeof(fw_flash_data));
     tftf_header_received = false;
 
-
     if (_gbfw_stage >= GBFW_STAGE_MIN && _gbfw_stage < GBFW_STAGE_MAX) {
         gbfw_firmware_size(_gbfw_stage + 1);
     } else {
@@ -132,7 +132,6 @@ static int gbfw_firmware_size_response(gb_operation_header *head, void *data,
     memcpy(&firmware_size_response, data, sizeof(firmware_size_response));
 
     fw_size = firmware_size_response.size;
-    dbgprinthex32(fw_size);
 
     if (fw_size > TFTF_HEADER_SIZE) {
         int rc;
@@ -168,9 +167,14 @@ static int gbfw_get_firmware(uint32_t offset, uint32_t size)
     return 0;
 }
 
+static inline uint16_t gbfw_get_payload_size(void)
+{
+    return greybus_get_max_payload_size();
+}
+
 static int gbfw_get_firmware_response(gb_operation_header *header, void *data,
                                       uint32_t len)
-{                                      
+{
     uint8_t *data_ptr;
     uint32_t flash_addr;
     uint32_t flash_data_size;
@@ -194,7 +198,6 @@ static int gbfw_get_firmware_response(gb_operation_header *header, void *data,
             dbgprint("No sections to flash");
             return GB_FW_ERR_INVALID;
         }
-        dbgprinthex32(section_index);
 
         /* erase image copy address and size */
         fw_flash_data.fw_flash_addr = tf_header->sections[section_index].section_load_address;
@@ -225,7 +228,8 @@ static int gbfw_get_firmware_response(gb_operation_header *header, void *data,
         dbgprint("\r\n");
 
         /* Calculate the size for get firmware request */
-        pl_data_size = greybus_get_max_msg_size();
+        pl_data_size = gbfw_get_payload_size();
+
         /* data size should be multiple of uint64_t */
         fw_flash_data.fw_request_size =
                  pl_data_size - (pl_data_size % sizeof(uint64_t));
@@ -330,8 +334,10 @@ int fw_cport_handler(uint32_t cportid, void *data, size_t len) {
     gb_operation_header *op_header = (gb_operation_header *)data;
     data_ptr = (uint8_t *)data;
 
-    if(op_header->size > len) {
-        dbgprint("fw_cport_handler: nonsense message.\r\n");
+    if (op_header->size > len) {
+        dbgprint("fw_cport_handler: payload size > total size.\r\n");
+        dbgprintx32("  total_size (len) = 0x", len, "\r\n");
+        dbgprintx32("      payload_size = 0x", op_header->size, "\r\n");
         return GB_FW_ERR_INVALID;
     }
 

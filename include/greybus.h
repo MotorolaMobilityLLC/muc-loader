@@ -139,7 +139,7 @@ extern uint16_t greybus_get_next_id(void);
 bool manifest_fetched_by_ap(void);
 
 extern struct gb_operation_hdr *greybus_get_operation_header(void);
-extern uint16_t greybus_get_max_msg_size(void);
+extern uint16_t greybus_get_max_payload_size(void);
 
 #define MAX_NW_PL_SIZE          2048 /* cport + GB header + DL payload */
 #define MAX_DMA_BUF_SIZE        MAX_NW_PL_SIZE + DL_HEADER_BITS_SIZE

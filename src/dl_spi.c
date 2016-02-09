@@ -58,8 +58,6 @@ extern int cport_connected;              /* TODO: factor out shared globals */
 uint8_t aTxBuffer[MAX_DMA_BUF_SIZE];
 uint8_t aRxBuffer[MAX_DMA_BUF_SIZE];
 
-
-
 struct spi_msg_hdr {
         uint8_t bits;
         uint8_t rsvd;
@@ -99,9 +97,9 @@ struct gb_operation_hdr *greybus_get_operation_header(void)
     return (struct gb_operation_hdr *)&aTxBuffer[DL_HEADER_BITS_SIZE + NW_HEADER_SIZE];
 }
 
-uint16_t greybus_get_max_msg_size(void)
+uint16_t datalink_get_max_payload_size(void)
 {
-     return  g_spi_data.payload_size - DL_HEADER_BITS_SIZE - NW_HEADER_SIZE;
+     return g_spi_data.payload_size;
 }
 
 e_armDMAtype dl_get_dma_type(void)
@@ -142,7 +140,6 @@ static inline void dl_call_sent_cb(void)
         cb();
 }
 
-
 void dl_init(void)
 {
     g_spi_data.armDMA = true;
@@ -151,9 +148,6 @@ void dl_init(void)
     dl_set_sent_cb(NULL);
     g_spi_data.protocol_type = datalink;
     g_spi_data.payload_size = INITIAL_DMA_BUF_SIZE;
-
-    dbgprintx32("aTxBuffer ", (uint32_t) aTxBuffer, "\r\n");
-    dbgprintx32("gb_op_hdr ", (uint32_t) greybus_get_operation_header(), "\r\n");
 }
 
 /* called from network layer */
@@ -266,7 +260,6 @@ int process_sent_complete(void)
 int dl_process_msg(void *msg)
 {
     struct spi_msg *spi_msg = (struct spi_msg *)msg;
-
 
     if (spi_msg->hdr.bits & HDR_BIT_VALID) {
         if ((spi_msg->hdr.bits & HDR_BIT_TYPE) == MSG_TYPE_NW) {

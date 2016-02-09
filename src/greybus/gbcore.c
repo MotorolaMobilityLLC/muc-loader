@@ -40,9 +40,15 @@ static uint16_t greybus_id_count = 1;
 uint16_t greybus_get_next_id(void)
 {
     uint16_t next = greybus_id_count++;
+
     if (!next)
         next = 1;
     return next;
+}
+
+uint16_t greybus_get_max_payload_size(void)
+{
+    return network_get_max_payload_size() - sizeof(struct gb_operation_hdr);
 }
 
 static int greybus_send_message(uint32_t cport,

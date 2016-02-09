@@ -46,13 +46,15 @@ struct mods_nw_msg
     uint8_t   payload[0];
 } __attribute__ ((packed));
 
+uint16_t network_get_max_payload_size(void)
+{
+    return datalink_get_max_payload_size() - sizeof(struct mods_nw_hdr);
+}
+
 int network_send(uint32_t cport, uint8_t *buf, size_t len, msg_sent_cb cb)
 {
     struct mods_nw_msg *nw = (struct mods_nw_msg *)&buf[-sizeof(struct mods_nw_hdr)];
     nw->hdr.cport = cport;
-    dbgprintx32("network_send ", (uint32_t)nw, "\r\n");
-    dbgprintx32("  - cport = ", (uint32_t)cport, "\r\n");
-    dbgprintx32("  - cb    = ", (uint32_t)cb, "\r\n");
 
     return datalink_send((uint8_t *)nw, len + sizeof(struct mods_nw_hdr), cb);
 }

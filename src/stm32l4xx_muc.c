@@ -113,6 +113,8 @@ void SystemClock_Config(void)
 /* USART init function */
 void MX_USART_UART_Init(void)
 {
+  device_console_init();
+
   huart.Instance = MOD_DEBUG_USART;
   huart.Init.BaudRate = 115200;
   huart.Init.WordLength = UART_WORDLENGTH_8B;

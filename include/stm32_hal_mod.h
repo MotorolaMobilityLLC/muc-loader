@@ -62,6 +62,8 @@ extern void SPI_NSS_INT_CTRL_Config(void);
 
 extern void mods_gpio_clk_enable(void);
 extern void device_gpio_init(void);
+extern void device_console_init(void);
+extern void device_console_deinit(void);
 extern PinState mods_force_flash_get(void);
 extern void mod_dev_base_spi_reset(void);
 /* Is the mod currently attached to a base? */

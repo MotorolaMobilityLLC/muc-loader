@@ -62,6 +62,7 @@ static int greybus_send_message(uint32_t cport,
     struct gb_operation_msg *msg = (struct gb_operation_msg *)greybus_get_operation_header();
     unsigned char *payload = &msg->data[0];
 
+#ifdef CONFIG_DEBUG_GREYBUS_CORE
     dbgprint("greybus_send_message\r\n");
     dbgprintx32("  - id = ", id, "\r\n");
     dbgprintx32("  - type = ", type, "\r\n");
@@ -69,6 +70,7 @@ static int greybus_send_message(uint32_t cport,
     dbgprintx32("  - gb_op_hdr = ", (uint32_t)msg, "\r\n");
     dbgprintx32("  - payload = ", (uint32_t) payload, "\r\n");
     dbgprintx32("  - callback = ", (uint32_t) cb, "\r\n");
+#endif
 
     msg->hdr.size    = sizeof(struct gb_operation_hdr) + payload_size;
     msg->hdr.id      = id;

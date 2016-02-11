@@ -223,7 +223,6 @@ int dl_muc_handler(void *msg)
         return GB_FW_ERR_FAILURE;
     }
 
-
     switch (dl_msg->mesg_id) {
     case DL_MUC_OP_BUS_CONFIG:
         rc = dl_bus_config(dl_msg);
@@ -288,16 +287,14 @@ int dl_process_msg(void *msg)
   *         add your own implementation.
   * @retval None
   */
-void HAL_SPI_ErrorCallback(SPI_HandleTypeDef *hspi)
+void HAL_SPI_ErrorCallback(SPI_HandleTypeDef *_hspi)
 {
-  dbgprint("SPIERR\r\n");
+  dbgprintx32("SPIERR : 0x", _hspi->ErrorCode, "\r\n");
 
   /* reset spi */
-  HAL_SPI_DeInit(hspi);
-  dbgprint("DeInit called\r\n");
+  HAL_SPI_DeInit(_hspi);
   mod_dev_base_spi_reset();
   MX_SPI_Init();
-  dbgprint("Re-Init\r\n");
   memset(aTxBuffer, 0, MAX_DMA_BUF_SIZE);
   memset(aRxBuffer, 0, MAX_DMA_BUF_SIZE);
   g_spi_data.armDMA = true;
@@ -319,9 +316,13 @@ static void Error_Handler(void)
   * @param  hspi: SPI handle
   * @retval None
   */
-void HAL_SPI_TxRxCpltCallback(SPI_HandleTypeDef *hspi)
+void HAL_SPI_TxRxCpltCallback(SPI_HandleTypeDef *_hspi)
 {
   dbgprint("HAL_SPI_TxRxCpltCallback\r\n");
+
+  /* Enable Software Slave Management to prevent spurious receives */
+  _hspi->Instance->CR1 |= (SPI_CR1_SSM | SPI_CR1_SSI);
+
   memset(aTxBuffer, 0, MAX_DMA_BUF_SIZE);
   dl_process_msg((struct mods_spi_msg *)aRxBuffer);
   memset(aRxBuffer, 0, MAX_DMA_BUF_SIZE);
@@ -366,6 +367,9 @@ void setup_exchange(void)
     dbgprint("--ARMED\r\n");
 
     g_spi_data.armDMA = false;
+
+    /* We are ready to receive, allow the hardware to manage the NSS */
+    hspi.Instance->CR1 &= ~(SPI_CR1_SSM | SPI_CR1_SSI);
     mods_rfr_set(PIN_SET);
   }
 }

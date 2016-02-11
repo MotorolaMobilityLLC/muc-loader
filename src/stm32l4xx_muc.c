@@ -146,6 +146,9 @@ void MX_SPI_Init(void)
   hspi.Init.NSSPMode = SPI_NSS_PULSE_DISABLED;
 
   HAL_SPI_Init(&hspi);
+
+  /* Enable Software Slave Management to prevent spurious receives */
+  hspi.Instance->CR1 |= SPI_CR1_SSM | SPI_CR1_SSI;
 }
 
 /**

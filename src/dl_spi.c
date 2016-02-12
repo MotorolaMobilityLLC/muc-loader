@@ -122,6 +122,9 @@ static inline void dl_call_sent_cb(int status)
 
 void dl_init(void)
 {
+#ifdef CONFIG_DEBUG_DATALINK
+    dbgprint("dl_init\r\n");
+#endif
     g_spi_data.armDMA = true;
     g_spi_data.respReady = false;
     dl_set_sent_cb(NULL, NULL);
@@ -172,6 +175,10 @@ static void dl_bus_config_cb(int status, void *data)
 {
     uint32_t pl_size = (uint32_t)data;
 
+#ifdef CONFIG_DEBUG_DATALINK
+    dbgprintx32("dl_bus_config_cb(0x", status, ",");
+    dbgprintx32(" 0x", pl_size, ")\r\n");
+#endif
     g_spi_data.payload_size = pl_size;
 }
 
@@ -191,6 +198,10 @@ static int dl_bus_config(struct spi_dl_msg *dl_msg)
     } else {
         payload.sel_payload_size = MAX_NW_PL_SIZE;
     }
+#ifdef CONFIG_DEBUG_DATALINK
+    dbgprintx32("dl_bus_config(0x", payload.max_bus_speed, ",");
+    dbgprintx32(" 0x", payload.sel_payload_size, ")\r\n");
+#endif
 
     return dl_send_dl_msg(dl_msg->mesg_id, GB_TYPE_RESPONSE, (uint8_t *)&payload,
                           sizeof(payload), dl_bus_config_cb,
@@ -202,6 +213,9 @@ int dl_muc_handler(void *msg)
     struct spi_dl_msg *dl_msg = (struct spi_dl_msg *)msg;
     int rc = 0;
 
+#ifdef CONFIG_DEBUG_DATALINK
+    dbgprint("dl_muc_handler\r\n");
+#endif
     if (dl_msg->mesg_id & GB_TYPE_RESPONSE) {
         return GB_FW_ERR_FAILURE;
     }
@@ -263,14 +277,11 @@ void HAL_SPI_ErrorCallback(SPI_HandleTypeDef *_hspi)
   Error_Handler(_hspi);
 }
 
-/**
-  * @brief  TxRx Transfer completed callback.
-  * @param  hspi: SPI handle
-  * @retval None
-  */
 void HAL_SPI_TxRxCpltCallback(SPI_HandleTypeDef *_hspi)
 {
+#ifdef CONFIG_DEBUG_DATALINK
   dbgprint("HAL_SPI_TxRxCpltCallback\r\n");
+#endif
 
   /* Enable Software Slave Management to prevent spurious receives */
   _hspi->Instance->CR1 |= (SPI_CR1_SSM | SPI_CR1_SSI);
@@ -282,7 +293,6 @@ void HAL_SPI_TxRxCpltCallback(SPI_HandleTypeDef *_hspi)
   g_spi_data.armDMA = true;
 }
 
-/* USER CODE END 0 */
 void setup_exchange(void)
 {
   uint32_t buf_size;
@@ -301,7 +311,10 @@ void setup_exchange(void)
       return;
     }
 
+#ifdef CONFIG_DEBUG_DATALINK
     dbgprint("WKE-L\r\n");
+    dbgprintx32("SR : 0x", hspi.Instance->SR, "\r\n");
+#endif
 
     /* select DMA buffer size */
     buf_size =  g_spi_data.payload_size + DL_HEADER_BITS_SIZE;
@@ -312,8 +325,9 @@ void setup_exchange(void)
       Error_Handler(&hspi);
     }
 
-    dbgprinthex32(buf_size);
-    dbgprint("--ARMED\r\n");
+#ifdef CONFIG_DEBUG_DATALINK
+    dbgprintx32("ARMED(0x", buf_size, ")\r\n");
+#endif
 
     g_spi_data.armDMA = false;
 

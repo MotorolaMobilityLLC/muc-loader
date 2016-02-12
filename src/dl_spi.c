@@ -125,8 +125,11 @@ void dl_init(void)
 #ifdef CONFIG_DEBUG_DATALINK
     dbgprint("dl_init\r\n");
 #endif
-    g_spi_data.armDMA = true;
+    mods_rfr_set(PIN_RESET);
+    mods_muc_int_set(PIN_RESET);
+    hspi.Instance->CR1 |= (SPI_CR1_SSM | SPI_CR1_SSI);
     g_spi_data.respReady = false;
+    g_spi_data.armDMA = true;
     dl_set_sent_cb(NULL, NULL);
     g_spi_data.payload_size = INITIAL_DMA_BUF_SIZE;
 }
@@ -248,6 +251,8 @@ int dl_process_msg(void *msg)
         }
     } else if (g_spi_data.respReady) {
         /* we were sending a message so handle it */
+        mods_rfr_set(PIN_RESET);
+        mods_muc_int_set(PIN_RESET);
         g_spi_data.respReady = false;
         dl_call_sent_cb(0);
     } else {
@@ -261,6 +266,10 @@ static void Error_Handler(SPI_HandleTypeDef *_hspi)
   dbgprint("FTL\r\n");
 
   /* reset spi */
+  mods_rfr_set(PIN_RESET);
+  mods_muc_int_set(PIN_RESET);
+  g_spi_data.respReady = false;
+
   HAL_SPI_DeInit(_hspi);
   mod_dev_base_spi_reset();
   MX_SPI_Init();
@@ -304,6 +313,8 @@ void setup_exchange(void)
     /* Response is ready, signal INT to base */
     if (g_spi_data.respReady == true) {
        mods_muc_int_set(PIN_SET);
+    } else {
+       mods_muc_int_set(PIN_RESET);
     }
 
     /* Wait for WAKE_N to arm DMA */

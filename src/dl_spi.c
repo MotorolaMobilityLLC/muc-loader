@@ -84,6 +84,7 @@ static struct {
     bool            armDMA;
     uint16_t        payload_size;
     msg_sent_cb     sent_cb;
+    void            *sent_ctx;
     bool            respReady;
 } g_spi_data;
 
@@ -98,36 +99,38 @@ uint16_t datalink_get_max_payload_size(void)
      return g_spi_data.payload_size;
 }
 
-
 static inline msg_sent_cb dl_get_sent_cb(void)
 {
     return g_spi_data.sent_cb;
 }
 
-static inline void dl_set_sent_cb(msg_sent_cb cb)
+static inline void dl_set_sent_cb(msg_sent_cb cb, void *ctx)
 {
-    g_spi_data.sent_cb = cb;
+    g_spi_data.sent_cb  = cb;
+    g_spi_data.sent_ctx = ctx;
 }
 
-static inline void dl_call_sent_cb(void)
+static inline void dl_call_sent_cb(int status)
 {
     msg_sent_cb cb = g_spi_data.sent_cb;
-    dl_set_sent_cb(NULL);
+    void *ctx = g_spi_data.sent_ctx;
+
+    dl_set_sent_cb(NULL, NULL);
     if (cb)
-        cb();
+        cb(status, ctx);
 }
 
 void dl_init(void)
 {
     g_spi_data.armDMA = true;
     g_spi_data.respReady = false;
-    dl_set_sent_cb(NULL);
+    dl_set_sent_cb(NULL, NULL);
     g_spi_data.payload_size = INITIAL_DMA_BUF_SIZE;
 }
 
 /* called from network layer */
 /* buf should point to the start of a network message */
-int datalink_send(uint8_t *buf, size_t len, msg_sent_cb cb)
+int datalink_send(uint8_t *buf, size_t len, msg_sent_cb cb, void *ctx)
 {
     struct spi_msg *dl = (struct spi_msg *)&buf[-sizeof(struct spi_msg_hdr)];
 
@@ -135,16 +138,17 @@ int datalink_send(uint8_t *buf, size_t len, msg_sent_cb cb)
     dl->hdr.bits |= HDR_BIT_VALID;
 
     g_spi_data.respReady = true;
-    dl_set_sent_cb(cb);
+    dl_set_sent_cb(cb, ctx);
 
     return 0;
 }
 
-static int dl_send_message(uint8_t id,
-                           uint8_t status,
-                           unsigned char *payload_data,
-                           uint16_t payload_size,
-                           msg_sent_cb cb)
+static int dl_send_dl_msg(uint8_t id,
+                          uint8_t status,
+                          unsigned char *payload_data,
+                          uint16_t payload_size,
+                          msg_sent_cb cb,
+                          void *ctx)
 {
     struct mods_spi_msg *spi_msg = (struct mods_spi_msg *)&aTxBuffer[0];
     unsigned char *payload = &spi_msg->dl_msg.dl_pl[0];
@@ -159,33 +163,38 @@ static int dl_send_message(uint8_t id,
     spi_msg->hdr_bits |= HDR_BIT_VALID;
 
     g_spi_data.respReady = true;
-    dl_set_sent_cb(cb);
+    dl_set_sent_cb(cb, ctx);
 
     return 0;
 }
 
-struct dl_muc_bus_config_response payload = {24000000, MAX_NW_PL_SIZE};
-
-static void dl_bus_config_cb(void)
+static void dl_bus_config_cb(int status, void *data)
 {
-    g_spi_data.payload_size = payload.sel_payload_size;
+    uint32_t pl_size = (uint32_t)data;
+
+    g_spi_data.payload_size = pl_size;
 }
 
 static int dl_bus_config(struct spi_dl_msg *dl_msg)
 {
     uint16_t recved_max_pl_size;
+    static struct dl_muc_bus_config_response payload = {
+        15000000,
+        MAX_NW_PL_SIZE
+    };
 
     memcpy(&recved_max_pl_size, &dl_msg->payload[0], sizeof(uint16_t));
     payload.max_bus_speed = 0;
 
-    if(recved_max_pl_size < MAX_NW_PL_SIZE) {
+    if (recved_max_pl_size < MAX_NW_PL_SIZE) {
         payload.sel_payload_size = recved_max_pl_size;
     } else {
         payload.sel_payload_size = MAX_NW_PL_SIZE;
     }
 
-    return dl_send_message(dl_msg->mesg_id, GB_TYPE_RESPONSE, (uint8_t *)&payload,
-                            sizeof(payload), dl_bus_config_cb);
+    return dl_send_dl_msg(dl_msg->mesg_id, GB_TYPE_RESPONSE, (uint8_t *)&payload,
+                          sizeof(payload), dl_bus_config_cb,
+                          (void *)(uint32_t)payload.sel_payload_size);
 }
 
 int dl_muc_handler(void *msg)
@@ -226,23 +235,16 @@ int dl_process_msg(void *msg)
     } else if (g_spi_data.respReady) {
         /* we were sending a message so handle it */
         g_spi_data.respReady = false;
-        dl_call_sent_cb();
+        dl_call_sent_cb(0);
     } else {
         dbgprint("UNEXPECTED MSG!!\r\n");
     }
   return 0;
 }
 
-/**
-  * @brief  SPI error callbacks.
-  * @param  hspi: SPI handle
-  * @note   This example shows a simple way to report transfer error, and you can
-  *         add your own implementation.
-  * @retval None
-  */
-void HAL_SPI_ErrorCallback(SPI_HandleTypeDef *_hspi)
+static void Error_Handler(SPI_HandleTypeDef *_hspi)
 {
-  dbgprintx32("SPIERR : 0x", _hspi->ErrorCode, "\r\n");
+  dbgprint("FTL\r\n");
 
   /* reset spi */
   HAL_SPI_DeInit(_hspi);
@@ -253,15 +255,12 @@ void HAL_SPI_ErrorCallback(SPI_HandleTypeDef *_hspi)
   g_spi_data.armDMA = true;
 }
 
-/**
-  * @brief  This function is executed in case of error occurrence.
-  * @param  None
-  * @retval None
-  */
-static void Error_Handler(void)
+void HAL_SPI_ErrorCallback(SPI_HandleTypeDef *_hspi)
 {
-  dbgprint("FTL\r\n");
-  HAL_NVIC_SystemReset();
+  dbgprintx32("SPIERR : 0x", _hspi->ErrorCode, "\r\n");
+
+  dl_call_sent_cb(-1);
+  Error_Handler(_hspi);
 }
 
 /**
@@ -310,7 +309,7 @@ void setup_exchange(void)
     if (HAL_SPI_TransmitReceive_DMA(&hspi, (uint8_t*)aTxBuffer,
                                     (uint8_t *)aRxBuffer, buf_size) != HAL_OK) {
       /* Transfer error in transmission process */
-      Error_Handler();
+      Error_Handler(&hspi);
     }
 
     dbgprinthex32(buf_size);

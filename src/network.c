@@ -56,7 +56,7 @@ int network_send(uint32_t cport, uint8_t *buf, size_t len, msg_sent_cb cb)
     struct mods_nw_msg *nw = (struct mods_nw_msg *)&buf[-sizeof(struct mods_nw_hdr)];
     nw->hdr.cport = cport;
 
-    return datalink_send((uint8_t *)nw, len + sizeof(struct mods_nw_hdr), cb);
+    return datalink_send((uint8_t *)nw, len + sizeof(struct mods_nw_hdr), cb, NULL);
 }
 
 /* TODO: switch should be part of greybus core */

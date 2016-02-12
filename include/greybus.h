@@ -111,7 +111,7 @@ struct mods_spi_msg
     };
 } __attribute__ ((packed));
 
-typedef void (*msg_sent_cb)(void); 
+typedef void (*msg_sent_cb)(int status, void *cntx);
 
 int control_cport_handler(uint32_t cportid,
                           void *data,

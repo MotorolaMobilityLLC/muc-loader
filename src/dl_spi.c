@@ -51,8 +51,6 @@
 
 SPI_HandleTypeDef hspi;                  /* TODO: factor out shared globals */
 
-static bool respReady;
-
 /* Buffer used for transmission */
 uint8_t aTxBuffer[MAX_DMA_BUF_SIZE];
 uint8_t aRxBuffer[MAX_DMA_BUF_SIZE];
@@ -86,6 +84,7 @@ static struct {
     bool            armDMA;
     uint16_t        payload_size;
     msg_sent_cb     sent_cb;
+    bool            respReady;
 } g_spi_data;
 
 /* TODO: migrate to gbcore.c */
@@ -121,7 +120,7 @@ static inline void dl_call_sent_cb(void)
 void dl_init(void)
 {
     g_spi_data.armDMA = true;
-    respReady = false;
+    g_spi_data.respReady = false;
     dl_set_sent_cb(NULL);
     g_spi_data.payload_size = INITIAL_DMA_BUF_SIZE;
 }
@@ -135,7 +134,7 @@ int datalink_send(uint8_t *buf, size_t len, msg_sent_cb cb)
     dl->hdr.bits = MSG_TYPE_NW;
     dl->hdr.bits |= HDR_BIT_VALID;
 
-    respReady = true;
+    g_spi_data.respReady = true;
     dl_set_sent_cb(cb);
 
     return 0;
@@ -159,7 +158,7 @@ static int dl_send_message(uint8_t id,
     spi_msg->hdr_bits = MSG_TYPE_DL;
     spi_msg->hdr_bits |= HDR_BIT_VALID;
 
-    respReady = true;
+    g_spi_data.respReady = true;
     dl_set_sent_cb(cb);
 
     return 0;
@@ -224,9 +223,9 @@ int dl_process_msg(void *msg)
         } else {
             return 0;
         }
-    } else if (respReady) {
+    } else if (g_spi_data.respReady) {
         /* we were sending a message so handle it */
-        respReady = false;
+        g_spi_data.respReady = false;
         dl_call_sent_cb();
     } else {
         dbgprint("UNEXPECTED MSG!!\r\n");
@@ -294,7 +293,7 @@ void setup_exchange(void)
      "aTxBuffer" buffer & receive data through "aRxBuffer" */
   if (g_spi_data.armDMA == true) {
     /* Response is ready, signal INT to base */
-    if (respReady == true) {
+    if (g_spi_data.respReady == true) {
        mods_muc_int_set(PIN_SET);
     }
 

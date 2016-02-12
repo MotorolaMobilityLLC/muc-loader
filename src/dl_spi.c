@@ -52,7 +52,6 @@
 SPI_HandleTypeDef hspi;                  /* TODO: factor out shared globals */
 
 static bool respReady;
-extern int cport_connected;              /* TODO: factor out shared globals */
 
 /* Buffer used for transmission */
 uint8_t aTxBuffer[MAX_DMA_BUF_SIZE];
@@ -235,20 +234,6 @@ int dl_muc_handler(void *msg)
     return rc;
 }
 
-static int process_mods_dl_msg(void *msg)
-{
-    int rc = 0;
-
-
-    dl_set_protocol_type(datalink);
-    if (cport_connected == 0) {
-        rc = dl_muc_handler(msg);
-    } else {
-        dbgprint("NO DL HNDL\r\n");
-    }
-    return rc;
-}
-
 int process_sent_complete(void)
 {
     dl_call_sent_cb();
@@ -266,7 +251,8 @@ int dl_process_msg(void *msg)
             network_recv(spi_msg->payload, g_spi_data.payload_size);
         } else if ((spi_msg->hdr.bits & HDR_BIT_TYPE) == MSG_TYPE_DL) {
             /* handle at our level */
-            process_mods_dl_msg(spi_msg->payload);
+            dl_set_protocol_type(datalink);
+            (void)dl_muc_handler(spi_msg->payload);
         } else {
             return 0;
         }

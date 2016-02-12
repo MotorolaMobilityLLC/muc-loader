@@ -83,7 +83,6 @@ struct dl_muc_bus_config_response {
 } __attribute__ ((__packed__));
 
 static struct {
-    e_armDMAtype    armDMAtype;
     bool            armDMA;
     e_protocol_type protocol_type;
     uint16_t        payload_size;
@@ -99,16 +98,6 @@ struct gb_operation_hdr *greybus_get_operation_header(void)
 uint16_t datalink_get_max_payload_size(void)
 {
      return g_spi_data.payload_size;
-}
-
-e_armDMAtype dl_get_dma_type(void)
-{
-    return g_spi_data.armDMAtype;
-}
-
-void dl_set_dma_type(e_armDMAtype t)
-{
-    g_spi_data.armDMAtype = t;
 }
 
 void dl_set_protocol_type(e_protocol_type t)
@@ -143,7 +132,6 @@ void dl_init(void)
 {
     g_spi_data.armDMA = true;
     respReady = false;
-    dl_set_dma_type(initial);
     dl_set_sent_cb(NULL);
     g_spi_data.protocol_type = datalink;
     g_spi_data.payload_size = INITIAL_DMA_BUF_SIZE;
@@ -192,7 +180,6 @@ struct dl_muc_bus_config_response payload = {24000000, MAX_NW_PL_SIZE};
 
 static void dl_bus_config_cb(void)
 {
-    dl_set_dma_type(full);
     g_spi_data.payload_size = payload.sel_payload_size;
 }
 
@@ -338,10 +325,7 @@ void setup_exchange(void)
     dbgprint("WKE-L\r\n");
 
     /* select DMA buffer size */
-    if(dl_get_dma_type() == initial)
-      buf_size = INITIAL_DMA_BUF_SIZE + DL_HEADER_BITS_SIZE;
-    else
-      buf_size =  g_spi_data.payload_size + DL_HEADER_BITS_SIZE;
+    buf_size =  g_spi_data.payload_size + DL_HEADER_BITS_SIZE;
 
     if (HAL_SPI_TransmitReceive_DMA(&hspi, (uint8_t*)aTxBuffer,
                                     (uint8_t *)aRxBuffer, buf_size) != HAL_OK) {

@@ -84,7 +84,6 @@ struct dl_muc_bus_config_response {
 
 static struct {
     bool            armDMA;
-    e_protocol_type protocol_type;
     uint16_t        payload_size;
     msg_sent_cb     sent_cb;
 } g_spi_data;
@@ -100,15 +99,6 @@ uint16_t datalink_get_max_payload_size(void)
      return g_spi_data.payload_size;
 }
 
-void dl_set_protocol_type(e_protocol_type t)
-{
-    g_spi_data.protocol_type = t;
-}
-
-e_protocol_type dl_get_protocol_type(void)
-{
-    return g_spi_data.protocol_type;
-}
 
 static inline msg_sent_cb dl_get_sent_cb(void)
 {
@@ -133,7 +123,6 @@ void dl_init(void)
     g_spi_data.armDMA = true;
     respReady = false;
     dl_set_sent_cb(NULL);
-    g_spi_data.protocol_type = datalink;
     g_spi_data.payload_size = INITIAL_DMA_BUF_SIZE;
 }
 
@@ -221,13 +210,6 @@ int dl_muc_handler(void *msg)
     return rc;
 }
 
-int process_sent_complete(void)
-{
-    dl_call_sent_cb();
-
-    return 0;
-}
-
 int dl_process_msg(void *msg)
 {
     struct spi_msg *spi_msg = (struct spi_msg *)msg;
@@ -238,7 +220,6 @@ int dl_process_msg(void *msg)
             network_recv(spi_msg->payload, g_spi_data.payload_size);
         } else if ((spi_msg->hdr.bits & HDR_BIT_TYPE) == MSG_TYPE_DL) {
             /* handle at our level */
-            dl_set_protocol_type(datalink);
             (void)dl_muc_handler(spi_msg->payload);
         } else {
             return 0;
@@ -246,7 +227,7 @@ int dl_process_msg(void *msg)
     } else if (respReady) {
         /* we were sending a message so handle it */
         respReady = false;
-        process_sent_complete();
+        dl_call_sent_cb();
     } else {
         dbgprint("UNEXPECTED MSG!!\r\n");
     }

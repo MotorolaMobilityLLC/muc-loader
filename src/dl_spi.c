@@ -235,6 +235,18 @@ int dl_muc_handler(void *msg)
     return rc;
 }
 
+static void dump(void)
+{
+  uint32_t buf_size =  g_spi_data.payload_size + DL_HEADER_BITS_SIZE;
+
+  dbgprintx32("DR:     0x", hspi.Instance->DR, "\r\n");
+  dbgprintx32("INT:      ", mods_muc_int_get(), "\r\n");
+  dbgprintx32("RFR:      ", mods_rfr_get(), "\r\n");
+  dbgprintx32("buf_sz  0x", buf_size, "\r\n");
+  dbgprintx32("respReady ", g_spi_data.respReady, "\r\n");
+  dbgprintx32("armDMA    ", g_spi_data.armDMA, "\r\n");
+}
+
 int dl_process_msg(void *msg)
 {
     struct spi_msg *spi_msg = (struct spi_msg *)msg;
@@ -257,6 +269,7 @@ int dl_process_msg(void *msg)
         dl_call_sent_cb(0);
     } else {
         dbgprint("UNEXPECTED MSG!!\r\n");
+        dump();
     }
   return 0;
 }
@@ -264,6 +277,7 @@ int dl_process_msg(void *msg)
 static void Error_Handler(SPI_HandleTypeDef *_hspi)
 {
   dbgprint("FTL\r\n");
+  dump();
 
   /* reset spi */
   mods_rfr_set(PIN_RESET);

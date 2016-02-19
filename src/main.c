@@ -122,6 +122,8 @@ static void Boot2Partition(int pIndex)
       return;
     }
 #endif
+    /* Return Clock Configuration to Default before booting */
+    HAL_RCC_DeInit();
     __set_PRIMASK(0);
 
     /* Initialize the Stack Pointer */
@@ -164,9 +166,6 @@ enum BootState CheckFlashMode(void)
 
 static void _init(void)
 {
-  /* Configure the system clock */
-  SystemClock_Config();
-
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
   MX_DMA_Init();
@@ -181,7 +180,10 @@ static void _init(void)
 
 int main(void)
 {
-  enum BootState bootState = CheckFlashMode();
+  enum BootState bootState;
+
+  SystemClock_Config();
+  bootState = CheckFlashMode();
 
   switch(bootState) {
   case BOOT_STATE_NORMAL:

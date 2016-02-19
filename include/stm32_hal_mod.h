@@ -76,6 +76,7 @@ extern void MX_USART_UART_Init(void);
 extern void MX_GPIO_Init(void);
 extern void MX_DMA_Init(void);
 extern int get_chip_uid(uint64_t *uid_high, uint64_t *uid_low);
+extern void reset_systick(void);
 
 /* flashing */
 #define FLASHMODE_FLAG_PAGE     (FLASH_BASE + FLASH_SIZE - FLASH_PAGE_SIZE)

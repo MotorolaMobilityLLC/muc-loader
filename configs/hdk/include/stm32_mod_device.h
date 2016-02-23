@@ -62,6 +62,13 @@
 
 #define MOD_TO_BASE_SPI               SPI2
 #define MOD_DEBUG_USART               USART3
+#define MOD_TO_SPI_FLASH              SPI1
+
+#define GPIO_PORT_MUC_SPI_SEL         GPIOC
+#define GPIO_PIN_MUC_SPI_SEL          GPIO_PIN_6
+
+#define GPIO_PORT_SPI1_CS_N           GPIOA
+#define GPIO_PIN_SPI1_CS_N            GPIO_PIN_4
 
 #define GPIO_PORT_FORCE_FLASH         GPIOB
 #define GPIO_PIN_FORCE_FLASH          GPIO_PIN_9
@@ -71,5 +78,11 @@
 
 #define GPIO_PORT_CONSOLE_RX          GPIOC
 #define GPIO_PIN_CONSOLE_RX           GPIO_PIN_11
+
+#define GPIO_PORT_APBE_PWR_EN         GPIOG
+#define GPIO_PIN_APBE_PWR_EN          GPIO_PIN_14
+
+#define GPIO_PORT_APBE_RST_N          GPIOH
+#define GPIO_PIN_APBE_RST_N           GPIO_PIN_1
 
 #endif /* __STM32L4XX_MOD_DEVICE_H */

@@ -291,7 +291,7 @@ static void Error_Handler(SPI_HandleTypeDef *_hspi)
   g_spi_data.armDMA = true;
 }
 
-void HAL_SPI_ErrorCallback(SPI_HandleTypeDef *_hspi)
+void dl_spi_error_handler(SPI_HandleTypeDef *_hspi)
 {
   dbgprintx32("SPIERR : 0x", _hspi->ErrorCode, "\r\n");
 
@@ -299,7 +299,7 @@ void HAL_SPI_ErrorCallback(SPI_HandleTypeDef *_hspi)
   Error_Handler(_hspi);
 }
 
-void HAL_SPI_TxRxCpltCallback(SPI_HandleTypeDef *_hspi)
+void dl_spi_transfer_complete(SPI_HandleTypeDef *_hspi)
 {
 #ifdef CONFIG_DEBUG_DATALINK
   dbgprint("HAL_SPI_TxRxCpltCallback\r\n");

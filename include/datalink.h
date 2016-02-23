@@ -29,6 +29,8 @@
 #ifndef __COMMON_INCLUDE_DATALINK_H
 #define __COMMON_INCLUDE_DATALINK_H
 
+#include "stm32l4xx_hal.h"
+
 /* Data Link request types */
 #define DL_MUC_OP_BUS_CONFIG        0x00
 #define DL_MUC_OP_BUS_CONFIG_RESP   0x80
@@ -53,6 +55,7 @@ extern void dl_init(void);
 extern int dl_process_msg(void* msg);
 extern int datalink_send(uint8_t *buf, size_t len, msg_sent_cb cb, void *ctx);
 extern uint16_t datalink_get_max_payload_size(void);
-
+extern void dl_spi_error_handler(SPI_HandleTypeDef *_hspi);
+extern void dl_spi_transfer_complete(SPI_HandleTypeDef *_hspi);
 extern void setup_exchange(void);
 #endif

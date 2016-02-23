@@ -313,6 +313,31 @@ int slave_pwrctrl_set_mode(enum slave_pwrctrl_mode mode)
 }
 #endif
 
+void HAL_SPI_ErrorCallback(SPI_HandleTypeDef *_hspi)
+{
+  if (_hspi == MOD_TO_BASE_SPI)
+    dl_spi_error_handler(_hspi);
+    return;
+
+#ifdef CONFIG_APBE_FLASH
+  if (_hspi == MOD_TO_SPI_FLASH)
+    spi_flash_error_handler(_hspi);
+#endif
+}
+
+void HAL_SPI_TxRxCpltCallback(SPI_HandleTypeDef *_hspi)
+{
+#ifdef CONFIG_APBE_FLASH
+  if (_hspi->Instance == MOD_TO_SPI_FLASH) {
+    spi_flash_transfer_complete(_hspi);
+    return;
+  }
+#endif
+
+  if (_hspi->Instance == MOD_TO_BASE_SPI)
+    dl_spi_transfer_complete(_hspi);
+}
+
 #ifdef USE_FULL_ASSERT
 /**
    * @brief Reports the name of the source file and the source line number

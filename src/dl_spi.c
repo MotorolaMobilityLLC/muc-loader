@@ -49,7 +49,7 @@
 #define MSG_TYPE_DL    (0 << 6)     /* Packet for/from data link layer */
 #define MSG_TYPE_NW    (1 << 6)     /* Packet for/from network layer */
 
-SPI_HandleTypeDef hspi;                  /* TODO: factor out shared globals */
+static SPI_HandleTypeDef gb_hspi;
 
 /* Buffer used for transmission */
 uint8_t aTxBuffer[MAX_DMA_BUF_SIZE];
@@ -125,6 +125,7 @@ void dl_init(void)
 #ifdef CONFIG_DEBUG_DATALINK
     dbgprint("dl_init\r\n");
 #endif
+    MX_SPI_Init(&gb_hspi);
     mods_rfr_set(PIN_RESET);
     mods_muc_int_set(PIN_RESET);
     g_spi_data.respReady = false;
@@ -238,7 +239,7 @@ static void dump(void)
 {
   uint32_t buf_size =  g_spi_data.payload_size + DL_HEADER_BITS_SIZE;
 
-  dbgprintx32("DR:     0x", hspi.Instance->DR, "\r\n");
+  dbgprintx32("DR:     0x", gb_hspi.Instance->DR, "\r\n");
   dbgprintx32("INT:      ", mods_muc_int_get(), "\r\n");
   dbgprintx32("RFR:      ", mods_rfr_get(), "\r\n");
   dbgprintx32("buf_sz  0x", buf_size, "\r\n");
@@ -326,16 +327,16 @@ void setup_exchange(void)
       dbgprint("RSP\r\n");
 #endif
       buf_size =  g_spi_data.payload_size + DL_HEADER_BITS_SIZE;
-      if (HAL_SPI_TransmitReceive_DMA(&hspi, (uint8_t*)aTxBuffer,
+      if (HAL_SPI_TransmitReceive_DMA(&gb_hspi, (uint8_t*)aTxBuffer,
                                           (uint8_t *)aRxBuffer, buf_size) != HAL_OK) {
         /* Transfer error in transmission process */
-        Error_Handler(&hspi);
+        Error_Handler(&gb_hspi);
       }
 
       g_spi_data.armDMA = false;
 
       /* We are ready to send, allow the hardware to manage the NSS */
-      hspi.Instance->CR1 &= ~(SPI_CR1_SSM | SPI_CR1_SSI);
+      gb_hspi.Instance->CR1 &= ~(SPI_CR1_SSM | SPI_CR1_SSI);
       mods_rfr_set(PIN_SET);
       mods_muc_int_set(PIN_SET);
     } else if (mods_wake_n_get() != PIN_SET) {
@@ -344,10 +345,10 @@ void setup_exchange(void)
       dbgprint("WKE-L\r\n");
 #endif
       buf_size =  g_spi_data.payload_size + DL_HEADER_BITS_SIZE;
-      if (HAL_SPI_TransmitReceive_DMA(&hspi, (uint8_t*)aTxBuffer,
+      if (HAL_SPI_TransmitReceive_DMA(&gb_hspi, (uint8_t*)aTxBuffer,
                                       (uint8_t *)aRxBuffer, buf_size) != HAL_OK) {
         /* Transfer error in transmission process */
-        Error_Handler(&hspi);
+        Error_Handler(&gb_hspi);
       }
 
 #ifdef CONFIG_DEBUG_DATALINK
@@ -356,7 +357,7 @@ void setup_exchange(void)
       g_spi_data.armDMA = false;
 
       /* We are ready to receive, allow the hardware to manage the NSS */
-      hspi.Instance->CR1 &= ~(SPI_CR1_SSM | SPI_CR1_SSI);
+      gb_hspi.Instance->CR1 &= ~(SPI_CR1_SSM | SPI_CR1_SSI);
       mods_rfr_set(PIN_SET);
     }
   }

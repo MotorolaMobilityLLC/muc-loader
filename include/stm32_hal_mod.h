@@ -71,7 +71,7 @@ extern bool mod_dev_is_attached(void);
 
 /* from main.c */
 extern void SystemClock_Config(void);
-extern void MX_SPI_Init(void);
+extern void MX_SPI_Init(SPI_HandleTypeDef  *_hspi);
 extern void MX_USART_UART_Init(void);
 extern void MX_GPIO_Init(void);
 extern void MX_DMA_Init(void);

@@ -45,6 +45,7 @@
 
 #include <stm32_hal_mod.h>
 
+extern SPI_HandleTypeDef  hspi;
 
 /* Private typedef -----------------------------------------------------------*/
 typedef void (*Function_Pointer)(void);
@@ -171,7 +172,7 @@ static void _init(void)
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
   MX_DMA_Init();
-  MX_SPI_Init();
+  MX_SPI_Init(&hspi);
   MX_USART_UART_Init();
 
   /* Config SPI NSS in interrupt mode */

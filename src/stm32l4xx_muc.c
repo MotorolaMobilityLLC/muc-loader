@@ -30,7 +30,6 @@
 #include <stm32_mod_device.h>
 
 static UART_HandleTypeDef huart;
-extern SPI_HandleTypeDef  hspi; /* defined in main */
 
 #define OTP_BASE_ADDR      0x1FFF7000
 /* Each OTP block is 8 bytes(double word) */
@@ -124,26 +123,26 @@ void MX_USART_UART_Init(void)
 }
 
 /* SPI init function */
-void MX_SPI_Init(void)
+void MX_SPI_Init(SPI_HandleTypeDef  *_hspi)
 {
-  hspi.Instance = MOD_TO_BASE_SPI;
-  hspi.Init.Mode = SPI_MODE_SLAVE;
-  hspi.Init.Direction = SPI_DIRECTION_2LINES;
-  hspi.Init.DataSize = SPI_DATASIZE_8BIT;
-  hspi.Init.CLKPolarity = SPI_POLARITY_LOW;
-  hspi.Init.CLKPhase = SPI_PHASE_1EDGE;
-  hspi.Init.NSS = SPI_NSS_HARD_INPUT;
-  hspi.Init.FirstBit = SPI_FIRSTBIT_MSB;
-  hspi.Init.TIMode = SPI_TIMODE_DISABLED;
-  hspi.Init.CRCCalculation = SPI_CRCCALCULATION_ENABLED;
-  hspi.Init.CRCPolynomial = 0x8005;
-  hspi.Init.CRCLength = SPI_CRC_LENGTH_16BIT;
-  hspi.Init.NSSPMode = SPI_NSS_PULSE_DISABLED;
+  _hspi->Instance = MOD_TO_BASE_SPI;
+  _hspi->Init.Mode = SPI_MODE_SLAVE;
+  _hspi->Init.Direction = SPI_DIRECTION_2LINES;
+  _hspi->Init.DataSize = SPI_DATASIZE_8BIT;
+  _hspi->Init.CLKPolarity = SPI_POLARITY_LOW;
+  _hspi->Init.CLKPhase = SPI_PHASE_1EDGE;
+  _hspi->Init.NSS = SPI_NSS_HARD_INPUT;
+  _hspi->Init.FirstBit = SPI_FIRSTBIT_MSB;
+  _hspi->Init.TIMode = SPI_TIMODE_DISABLED;
+  _hspi->Init.CRCCalculation = SPI_CRCCALCULATION_ENABLED;
+  _hspi->Init.CRCPolynomial = 0x8005;
+  _hspi->Init.CRCLength = SPI_CRC_LENGTH_16BIT;
+  _hspi->Init.NSSPMode = SPI_NSS_PULSE_DISABLED;
 
-  HAL_SPI_Init(&hspi);
+  HAL_SPI_Init(_hspi);
 
   /* Enable Software Slave Management to prevent spurious receives */
-  hspi.Instance->CR1 |= SPI_CR1_SSM | SPI_CR1_SSI;
+  _hspi->Instance->CR1 |= SPI_CR1_SSM | SPI_CR1_SSI;
 }
 
 /**

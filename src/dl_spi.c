@@ -285,7 +285,7 @@ static void Error_Handler(SPI_HandleTypeDef *_hspi)
 
   HAL_SPI_DeInit(_hspi);
   mod_dev_base_spi_reset();
-  MX_SPI_Init();
+  MX_SPI_Init(_hspi);
   memset(aTxBuffer, 0, MAX_DMA_BUF_SIZE);
   memset(aRxBuffer, 0, MAX_DMA_BUF_SIZE);
   g_spi_data.armDMA = true;

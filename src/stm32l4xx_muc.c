@@ -122,29 +122,6 @@ void MX_USART_UART_Init(void)
   HAL_UART_Init(&huart);
 }
 
-/* SPI init function */
-void MX_SPI_Init(SPI_HandleTypeDef  *_hspi)
-{
-  _hspi->Instance = MOD_TO_BASE_SPI;
-  _hspi->Init.Mode = SPI_MODE_SLAVE;
-  _hspi->Init.Direction = SPI_DIRECTION_2LINES;
-  _hspi->Init.DataSize = SPI_DATASIZE_8BIT;
-  _hspi->Init.CLKPolarity = SPI_POLARITY_LOW;
-  _hspi->Init.CLKPhase = SPI_PHASE_1EDGE;
-  _hspi->Init.NSS = SPI_NSS_HARD_INPUT;
-  _hspi->Init.FirstBit = SPI_FIRSTBIT_MSB;
-  _hspi->Init.TIMode = SPI_TIMODE_DISABLED;
-  _hspi->Init.CRCCalculation = SPI_CRCCALCULATION_ENABLED;
-  _hspi->Init.CRCPolynomial = 0x8005;
-  _hspi->Init.CRCLength = SPI_CRC_LENGTH_16BIT;
-  _hspi->Init.NSSPMode = SPI_NSS_PULSE_DISABLED;
-
-  HAL_SPI_Init(_hspi);
-
-  /* Enable Software Slave Management to prevent spurious receives */
-  _hspi->Instance->CR1 |= SPI_CR1_SSM | SPI_CR1_SSI;
-}
-
 /**
   * Enable DMA controller clock
   */

@@ -64,6 +64,7 @@ extern void mods_gpio_clk_enable(void);
 extern void device_gpio_init(void);
 extern void device_console_init(void);
 extern void device_console_deinit(void);
+extern void device_spi_mod_init(SPI_HandleTypeDef *_hspi);
 extern PinState mods_force_flash_get(void);
 extern void mod_dev_base_spi_reset(void);
 /* Is the mod currently attached to a base? */
@@ -71,7 +72,6 @@ extern bool mod_dev_is_attached(void);
 
 /* from main.c */
 extern void SystemClock_Config(void);
-extern void MX_SPI_Init(SPI_HandleTypeDef  *_hspi);
 extern void MX_USART_UART_Init(void);
 extern void MX_GPIO_Init(void);
 extern void MX_DMA_Init(void);

@@ -125,7 +125,7 @@ void dl_init(void)
 #ifdef CONFIG_DEBUG_DATALINK
     dbgprint("dl_init\r\n");
 #endif
-    MX_SPI_Init(&gb_hspi);
+    device_spi_mod_init(&gb_hspi);
     mods_rfr_set(PIN_RESET);
     mods_muc_int_set(PIN_RESET);
     g_spi_data.respReady = false;
@@ -286,7 +286,7 @@ static void Error_Handler(SPI_HandleTypeDef *_hspi)
 
   HAL_SPI_DeInit(_hspi);
   mod_dev_base_spi_reset();
-  MX_SPI_Init(_hspi);
+  device_spi_mod_init(_hspi);
   memset(aTxBuffer, 0, MAX_DMA_BUF_SIZE);
   memset(aRxBuffer, 0, MAX_DMA_BUF_SIZE);
   g_spi_data.armDMA = true;

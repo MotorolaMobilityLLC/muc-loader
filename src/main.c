@@ -167,6 +167,8 @@ enum BootState CheckFlashMode(void)
 
 static void _init(void)
 {
+  SystemClock_Config();
+
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
   MX_DMA_Init();

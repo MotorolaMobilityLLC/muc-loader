@@ -32,4 +32,7 @@
 #define ARM_NVIC_ICTR ((uint32_t *)0xE000E004)
 #define ARM_NVIC_ICER ((uint32_t *)0xE000E180)
 
+#define STM32_EXTI_BASE 0x40010400
+#define STM32_EXTI_PR1  (STM32_EXTI_BASE + 0x14)
+
 #endif

@@ -1,5 +1,6 @@
 /**
  * Copyright (c) 2015 Google Inc.
+ * Copyright (c) 2016 Motorola LLC.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -26,120 +27,11 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef __COMMON_INCLUDE_CHIPAPI_H
-#define __COMMON_INCLUDE_CHIPAPI_H
+#ifndef __CHIPAPI_H
+#define __CHIPAPI_H
 
 #include <stdint.h>
 #include <stddef.h>
-
-void chip_init(void);
-
-/* For debug output */
-void chip_dbginit(void);
-void chip_dbgputc(int);
-void chip_dbgflush(void);
-
-/* Used when CONFIG_GPIO=y */
-#ifdef CONFIG_GPIO
-void chip_gpio_init(void);
-uint8_t chip_gpio_get_value(uint8_t which);
-void chip_gpio_set_value(uint8_t which, uint8_t value);
-void chip_gpio_direction_in(uint8_t which);
-void chip_gpio_direction_out(uint8_t which, uint8_t value);
-#else
-static inline void chip_gpio_init(void) {}
-static inline uint8_t chip_gpio_get_value(uint8_t which) {return 0;}
-static inline void chip_gpio_set_value(uint8_t which, uint8_t value) {}
-static inline void chip_gpio_direction_in(uint8_t which) {}
-static inline void chip_gpio_direction_out(uint8_t which, uint8_t value) {}
-#endif
-
-#if defined(_SIMULATION) && ((BOOT_STAGE == 1) || (BOOT_STAGE == 3))
-void chip_handshake_with_test_controller(void);
-void chip_signal_boot_status(uint32_t status);
-#endif
-
-int chip_validate_data_load_location(void *base, uint32_t length);
-
-void chip_reset_before_jump(void);
-void chip_jump_to_image(uint32_t start_address);
-
-void chip_unipro_init(void);
-int chip_unipro_init_cport(uint32_t cportid);
-int chip_unipro_recv_cport(uint32_t *cportid);
-
-#define ATTR_LOCAL 0
-#define ATTR_PEER  1
-/**
- * @brief Perform a DME get request
- * @param attr DME attribute address
- * @param val destination to read into
- * @param selector attribute selector index, or NCP_SELINDEXNULL if none
- * @param peer 1 if peer access, 0 if local
- * @param result_code destination for access result
- * @return 0
- */
-int chip_unipro_attr_read(uint16_t attr,
-                          uint32_t *val,
-                          uint16_t selector,
-                          int peer,
-                          uint32_t *result_code);
-
-/**
- * @brief Perform a DME set request
- * @param attr DME attribute address
- * @param val value to write
- * @param selector attribute selector index, or NCP_SELINDEXNULL if none
- * @param peer 1 if peer access, 0 if local
- * @param result_code destination for access result
- * @return 0
- */
-int chip_unipro_attr_write(uint16_t attr,
-                           uint32_t val,
-                           uint16_t selector,
-                           int peer,
-                           uint32_t *result_code);
-
-/**
- * @brief send data down a CPort
- * @param cportid cport to send down
- * @param buf data buffer
- * @param len size of data to send
- * @return 0 on success, <0 on error
- */
-int chip_unipro_send(unsigned int cportid, const void *buf, size_t len);
-
-/**
- * @brief handler callback for UniPro data RX
- * @param cportid cport which received data
- * @param data pointer to the data buffer
- * @param len number of bytes of data received
- * @return 0 on success, <0 on error
- */
-typedef int (*unipro_rx_handler)(uint32_t cportid,
-                                 void *data,
-                                 size_t len);
-
-
-/**
- * @brief advertise the boot status to the switch
- * @param boot_status
- * @param result_code destination for advertisement result
- * @return 0 on success, <0 on error
- */
-int chip_advertise_boot_status(uint32_t boot_status, uint32_t *result_code);
-
-/**
- * @brief advertise the boot type to the switch
- * @param result_code destination for advertisement result
- * @return 0 on success, <0 on error
- */
-int chip_advertise_boot_type(uint32_t *result_code);
-
-/**
- * @brief reset UniPro before signalling readiness to boot firmware to switch
- */
-void chip_reset_before_ready(void);
 
 /**
  * @brief check if a crypto key has been revoked
@@ -147,18 +39,11 @@ void chip_reset_before_ready(void);
  * @return 0 indicates the key is NOT revoked
  *         1 indicates the key has been revoked so should not be used.
  */
-int chip_is_key_revoked(int index);
-
-/*
- * @brief wait for unipro link up sequence to finish
- * This is called when boot ROM needs the link to be ready
- * so never return if the link is not ready
- */
-void chip_wait_for_link_up(void);
+extern int chip_is_key_revoked(int index);
 
 /**
  * @brief clear/disable all irqs
  */
 extern void chip_reset_irqs(void);
 
-#endif /* __COMMON_INCLUDE_CHIPAPI_H */
+#endif /* __CHIPAPI_H */

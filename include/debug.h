@@ -29,7 +29,7 @@
 #ifndef __COMMON_INCLUDE_DEBUG_H
 #define __COMMON_INCLUDE_DEBUG_H
 
-#include "chipapi.h"
+#include <stdint.h>
 
 #ifdef _DEBUG
     void dbginit(void);

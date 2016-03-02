@@ -156,4 +156,9 @@ int chip_is_key_revoked(int index);
  */
 void chip_wait_for_link_up(void);
 
+/**
+ * @brief clear/disable all irqs
+ */
+extern void chip_reset_irqs(void);
+
 #endif /* __COMMON_INCLUDE_CHIPAPI_H */

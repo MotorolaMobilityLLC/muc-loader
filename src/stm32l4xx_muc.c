@@ -26,8 +26,11 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#include <chipapi.h>
 #include <stm32_hal_mod.h>
 #include <stm32_mod_device.h>
+
+#include <stm32_defs.h>
 
 static UART_HandleTypeDef huart;
 
@@ -47,6 +50,18 @@ void reset_systick(void)
     SysTick->CTRL = 0UL;
     SysTick->LOAD = 0UL;
     SysTick->VAL = 0UL;
+}
+
+/* manually clear all of the ARM NVIC extern interrupts */
+void chip_reset_irqs(void)
+{
+  volatile static uint32_t *nvic_ictr = ARM_NVIC_ICTR;
+  volatile static uint32_t *nvic_icer = ARM_NVIC_ICER;
+  uint32_t r;
+
+  for (r = 0; r <  *nvic_ictr; r++) {
+      nvic_icer[r] = 0xffffffff;
+  }
 }
 
 bool mods_is_spi_csn(uint16_t pin)

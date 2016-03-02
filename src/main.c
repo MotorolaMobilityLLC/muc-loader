@@ -35,6 +35,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdbool.h>
+#include <chipapi.h>
 #include <debug.h>
 #include <greybus.h>
 #include <version.h>
@@ -124,6 +125,7 @@ static void Boot2Partition(int pIndex)
     /* Return Clock Configuration to Default before booting */
     HAL_RCC_DeInit();
     reset_systick();
+    chip_reset_irqs();
 
     __set_PRIMASK(0);
 

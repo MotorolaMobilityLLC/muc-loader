@@ -72,10 +72,16 @@ void SPI_NSS_INT_CTRL_Config(void)
 {
   GPIO_InitTypeDef GPIO_InitStruct;
 
-  /* GPIO Ports Clock Enable */
-  /* GPIOB has to be enabled by now */
+  /* Configure GPIO pin : MUC_INT */
+  memset(&GPIO_InitStruct, 0, sizeof(GPIO_InitStruct));
+  GPIO_InitStruct.Pin = GPIO_PIN_MUC_INT;
+  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Speed = GPIO_SPEED_HIGH;
+  HAL_GPIO_Init(GPIO_PORT_MUC_INT, &GPIO_InitStruct);
 
   /*Configure GPIO pin : PB12 */
+  memset(&GPIO_InitStruct, 0, sizeof(GPIO_InitStruct));
   GPIO_InitStruct.Pin = GPIO_PIN_SPI_CS_N;
   GPIO_InitStruct.Mode = GPIO_MODE_IT_FALLING;
   GPIO_InitStruct.Pull = GPIO_NOPULL;

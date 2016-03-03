@@ -171,13 +171,6 @@ void MX_GPIO_Init(void)
   /* GPIO Ports Clock Enable */
   mods_gpio_clk_enable();
 
-  /*Configure GPIO pin : MUC_INT */
-  GPIO_InitStruct.Pin = GPIO_PIN_MUC_INT;
-  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
-  GPIO_InitStruct.Pull = GPIO_NOPULL;
-  GPIO_InitStruct.Speed = GPIO_SPEED_HIGH;
-  HAL_GPIO_Init(GPIO_PORT_MUC_INT, &GPIO_InitStruct);
-
  /*Configure GPIO pin : RDY/RFR */
   GPIO_InitStruct.Pin = GPIO_PIN_RFR;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;

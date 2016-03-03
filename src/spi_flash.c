@@ -149,9 +149,9 @@ static void Error_Handler(SPI_HandleTypeDef *hspi)
     wTransferState = TRANSFER_ERROR;
     /* reset spi */
     mods_muc_set_spi1_cs(PIN_SET);
-    HAL_SPI_DeInit(&hspi);
+    HAL_SPI_DeInit(hspi);
     dbgprint("SPI Flash DeInit\r\n");
-    device_spi_flash_init(&hspi_flash);
+    device_spi_flash_init(hspi);
     dbgprint("SPI Flash Re-Init\r\n");
     memset(aTxBuffer_spiFlash, 0, MAX_DMA_BUF_SIZE);
     memset(aRxBuffer_spiFlash, 0, MAX_DMA_BUF_SIZE);

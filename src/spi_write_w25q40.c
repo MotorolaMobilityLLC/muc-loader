@@ -166,7 +166,7 @@ static int spi_flash_write_enable(void) {
     return 0;
 }
 
-static int spi_flash_wait_for_not_busy(void) {
+static void spi_flash_wait_for_not_busy(void) {
     uint8_t txbuf[STATUS_CMD_SIZE];
     memset(txbuf, 0, STATUS_CMD_SIZE);
     txbuf[0] = STATUS_CMD;

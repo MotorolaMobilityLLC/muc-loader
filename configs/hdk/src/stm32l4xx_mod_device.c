@@ -82,12 +82,22 @@ void device_gpio_init(void)
 {
   GPIO_InitTypeDef GPIO_InitStruct;
 
+#ifdef GPIO_PIN_FORCE_FLASH
   /* Configure GPIO pin : FORCE FLASH */
   memset(&GPIO_InitStruct, 0, sizeof(GPIO_InitStruct));
   GPIO_InitStruct.Pin = GPIO_PIN_FORCE_FLASH;
   GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(GPIO_PORT_FORCE_FLASH, &GPIO_InitStruct);
+#else
+  /* Use INT GPIO as 'force flash' */
+  /* will be changed to output during spi setup in SPI_NSS_INT_CTRL_Config */
+  memset(&GPIO_InitStruct, 0, sizeof(GPIO_InitStruct));
+  GPIO_InitStruct.Pin = GPIO_PIN_MUC_INT;
+  GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  HAL_GPIO_Init(GPIO_PORT_MUC_INT, &GPIO_InitStruct);
+#endif
 
   /* Attach Detection */
   memset(&GPIO_InitStruct, 0, sizeof(GPIO_InitStruct));
@@ -177,7 +187,11 @@ void device_spi_flash_init(SPI_HandleTypeDef *_hspi)
 
 PinState mods_force_flash_get(void)
 {
+#ifdef GPIO_PIN_FORCE_FLASH
   return HAL_GPIO_ReadPin(GPIO_PORT_FORCE_FLASH, GPIO_PIN_FORCE_FLASH);
+#else
+  return HAL_GPIO_ReadPin(GPIO_PORT_MUC_INT, GPIO_PIN_MUC_INT);
+#endif
 }
 
 void mod_dev_base_spi_reset(void)

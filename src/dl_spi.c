@@ -276,14 +276,13 @@ int dl_process_msg(void *msg)
 
 static void Error_Handler(SPI_HandleTypeDef *_hspi)
 {
-  dbgprint("FTL\r\n");
-  dump();
-
-  /* reset spi */
   mods_rfr_set(PIN_RESET);
   mods_muc_int_set(PIN_RESET);
   g_spi_data.respReady = false;
+  _hspi->Instance->CR1 |= (SPI_CR1_SSM | SPI_CR1_SSI);
 
+  dbgprintx32("SPIERR : 0x", _hspi->ErrorCode, "\r\n");
+  dump();
   HAL_SPI_DeInit(_hspi);
   mod_dev_base_spi_reset();
   device_spi_mod_init(_hspi);
@@ -294,20 +293,21 @@ static void Error_Handler(SPI_HandleTypeDef *_hspi)
 
 void dl_spi_error_handler(SPI_HandleTypeDef *_hspi)
 {
-  dbgprintx32("SPIERR : 0x", _hspi->ErrorCode, "\r\n");
-
-  dl_call_sent_cb(-1);
   Error_Handler(_hspi);
+  dl_call_sent_cb(-1);
 }
 
 void dl_spi_transfer_complete(SPI_HandleTypeDef *_hspi)
 {
-#ifdef CONFIG_DEBUG_DATALINK
-  dbgprint("HAL_SPI_TxRxCpltCallback\r\n");
-#endif
+  mods_rfr_set(PIN_RESET);
+  mods_muc_int_set(PIN_RESET);
 
   /* Enable Software Slave Management to prevent spurious receives */
   _hspi->Instance->CR1 |= (SPI_CR1_SSM | SPI_CR1_SSI);
+
+#ifdef CONFIG_DEBUG_DATALINK
+  dbgprint("TxRxCpltCB\r\n");
+#endif
 
   memset(aTxBuffer, 0, MAX_DMA_BUF_SIZE);
   dl_process_msg((struct mods_spi_msg *)aRxBuffer);
@@ -333,6 +333,9 @@ void setup_exchange(void)
         Error_Handler(&gb_hspi);
       }
 
+#ifdef CONFIG_DEBUG_DATALINK
+      dbgprintx32("ARMED(0x", buf_size, ")\r\n");
+#endif
       g_spi_data.armDMA = false;
 
       /* We are ready to send, allow the hardware to manage the NSS */

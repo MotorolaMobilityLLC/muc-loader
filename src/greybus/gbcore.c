@@ -55,7 +55,7 @@ static int greybus_send_message(uint32_t cport,
                                 uint16_t id,
                                 uint8_t type,
                                 uint8_t status,
-                                unsigned char *payload_data,
+                                const unsigned char *payload_data,
                                 uint16_t payload_size,
                                 msg_sent_cb cb)
 {
@@ -88,7 +88,7 @@ static int greybus_send_message(uint32_t cport,
 int greybus_send_request(uint32_t cport,
                          uint16_t id,
                          uint8_t type,
-                         unsigned char *payload_data,
+                         const unsigned char *payload_data,
                          uint16_t payload_size,
                          msg_sent_cb cb)
 {
@@ -104,7 +104,7 @@ int greybus_send_request(uint32_t cport,
 int greybus_send_response(uint32_t cport,
                         gb_operation_header *op_header,
                         uint8_t status,
-                        unsigned char *payload_data,
+                        const unsigned char *payload_data,
                         uint16_t payload_size,
                         msg_sent_cb cb)
 {

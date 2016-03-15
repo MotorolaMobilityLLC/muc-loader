@@ -60,6 +60,7 @@ extern void mods_gpio_clk_enable(void);
 extern void device_gpio_init(void);
 extern void device_console_init(void);
 extern void device_console_deinit(void);
+extern void device_dma_init(void);
 extern void device_spi_mod_init(SPI_HandleTypeDef *_hspi);
 extern void device_spi_flash_init(SPI_HandleTypeDef *_hspi);
 extern PinState mods_force_flash_get(void);

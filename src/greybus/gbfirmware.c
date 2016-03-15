@@ -74,7 +74,7 @@ static int gbfw_get_version(uint32_t cportid, gb_operation_header *header)
                                sizeof(payload), NULL);
 }
 
-static void gbfw_ap_ready_cb(void)
+static void gbfw_ap_ready_cb(int status, void *cntx)
 {
    (void)gbfw_firmware_size(GBFW_STAGE_MIN);
 }
@@ -304,7 +304,7 @@ static int gbfw_get_firmware_response(gb_operation_header *header, void *data,
     return 0;
 }
 
-static void gbfw_ready_to_boot_cb(void)
+static void gbfw_ready_to_boot_cb(int status, void *cntx)
 {
 #if CONFIG_ROOT_VERSION == 0
     HAL_NVIC_SystemReset();

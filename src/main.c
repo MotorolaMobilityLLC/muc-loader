@@ -45,6 +45,7 @@
 #include "tftf.h"
 
 #include <stm32_hal_mod.h>
+#include <spi_flash_write.h>
 
 /* Private typedef -----------------------------------------------------------*/
 typedef void (*Function_Pointer)(void);
@@ -307,7 +308,7 @@ void HAL_SPI_ErrorCallback(SPI_HandleTypeDef *_hspi)
     dl_spi_error_handler(_hspi);
   }
 #ifdef CONFIG_APBE_FLASH
-  else if (_hspi == MOD_TO_SPI_FLASH) {
+  else if (_hspi->Instance == MOD_TO_SPI_FLASH) {
     spi_flash_error_handler(_hspi);
   }
 #endif

@@ -102,7 +102,7 @@ bool valid_tftf_type(uint32_t section_type) {
  *
  * @returns True if valid section, false otherwise
  */
-bool valid_tftf_section(tftf_section_descriptor * section,
+bool valid_tftf_section(const tftf_section_descriptor * section,
                         const tftf_header * header,
                         bool * section_contains_start,
                         bool * end_of_sections) {
@@ -110,7 +110,7 @@ bool valid_tftf_section(tftf_section_descriptor * section,
     uint32_t    section_end;
     uint32_t    other_section_start;
     uint32_t    other_section_end;
-    tftf_section_descriptor * other_section;
+    const tftf_section_descriptor * other_section;
 
     if (!valid_tftf_type(section->section_type)) {
         dbgprint("BRE_TFTF_HEADER_TYPE\r\n");
@@ -182,7 +182,7 @@ bool valid_tftf_section(tftf_section_descriptor * section,
  * @returns True if valid TFTF header, false otherwise
  */
 bool valid_tftf_header(const tftf_header * header) {
-    tftf_section_descriptor * section;
+    const tftf_section_descriptor * section;
     bool section_contains_start = false;
     bool end_of_sections = false;
     int i;

@@ -33,6 +33,7 @@
 #include "crypto.h"
 
 #include "./bootrom.c"
+#include <chipapi.h>
 
 void (*sha256_init_func)(sha256 *sh);
 void (*sha256_process_func)(sha256 *sh,int byte);

@@ -301,26 +301,6 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
   }
 }
 
-#ifdef MOD_SLAVE_APBE
-int slave_pwrctrl_set_mode(enum slave_pwrctrl_mode mode)
-{
-    switch (mode) {
-    case SLAVE_PWRCTRL_POWER_ON:
-        dbgprint("POWER_ON\r\n");
-    case SLAVE_PWRCTRL_POWER_FLASH_MODE:
-        dbgprint("POWER_FLASH_MODE\r\n");
-        apbe_power_on_flash();
-        break;
-    case SLAVE_PWRCTRL_POWER_OFF:
-        dbgprint("POWER_OFF\r\n");
-    default:
-        apbe_power_off();
-        break;
-    }
-    return 0;
-}
-#endif
-
 void HAL_SPI_ErrorCallback(SPI_HandleTypeDef *_hspi)
 {
   if (_hspi->Instance == MOD_TO_BASE_SPI) {

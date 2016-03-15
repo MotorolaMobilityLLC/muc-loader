@@ -45,12 +45,6 @@ typedef enum
   PIN_SET
 } PinState;
 
-enum slave_pwrctrl_mode {
-    SLAVE_PWRCTRL_POWER_ON          = 0x01,
-    SLAVE_PWRCTRL_POWER_OFF         = 0x02,
-    SLAVE_PWRCTRL_POWER_FLASH_MODE  = 0x03,
-};
-
 extern bool mods_is_spi_csn(uint16_t pin);
 extern void mods_rfr_set(PinState pstate);
 extern PinState mods_rfr_get(void);
@@ -104,5 +98,13 @@ int program_flash_lock(void);
 int program_flash_unlock(void);
 int program_flash_dword(const uint64_t *dword);
 uint32_t mod_get_tftf_addr(void);
+
+# ifdef CONFIG_SLAVE_APBE
+extern void apbe_power_on_flash(void);
+extern void apbe_power_off(void);
+# else
+static inline void apbe_power_on_flash(void) {}
+static inline void apbe_power_off(void) {}
+# endif
 
 #endif /* __STM32_HAL_MOD_H */

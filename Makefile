@@ -129,6 +129,10 @@ CSRCS      += spi_write_w25q40.c \
 	      spi_flash.c
 endif
 
+ifeq ($(CONFIG_SLAVE_APBE),y)
+CSRCS      += apbe.c
+endif
+
 # Basic HAL libraries
 CSRCS      += $(CHIPSET_LC)_hal_rcc.c \
               $(CHIPSET_LC)_hal_rcc_ex.c \

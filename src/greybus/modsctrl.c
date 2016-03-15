@@ -35,6 +35,7 @@
 #include "gbfirmware.h"
 
 #include "stm32l4xx_hal.h"
+#include <apbe.h>
 
 #include <version.h>
 #include <config.h>
@@ -61,12 +62,6 @@
 #define MB_CONTROL_SLAVE_POWER_ON             0x01
 #define MB_CONTROL_SLAVE_POWER_OFF            0x02
 #define MB_CONTROL_SLAVE_POWER_FLASH_MODE     0x03
-
-enum slave_pwrctrl_mode {
-    SLAVE_PWRCTRL_POWER_ON          = 0x01,
-    SLAVE_PWRCTRL_POWER_OFF         = 0x02,
-    SLAVE_PWRCTRL_POWER_FLASH_MODE  = 0x03,
-};
 
 /* Control protocol version request has no payload */
 struct mb_control_proto_version_response {
@@ -131,7 +126,7 @@ static int modsctrl_get_ids(uint32_t cportid,
     get_chip_id(&get_ids_resp.unipro_mfg_id, &get_ids_resp.unipro_prod_id);
     get_board_id(&get_ids_resp.ara_vend_id, &get_ids_resp.ara_prod_id);
     get_chip_uid(&get_ids_resp.uid_high, &get_ids_resp.uid_low);
-#ifdef MOD_SLAVE_APBE
+#ifdef CONFIG_SLAVE_APBE
     get_ids_resp.slave_mask = 1;
     dbgprint("MODCTRL:SLAVE MASK SET\r\n");
 #else

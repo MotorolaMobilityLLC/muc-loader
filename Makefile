@@ -92,7 +92,7 @@ INCS      += -I$(CMSIS_DIR)/Device/ST/$(CHIPSET)/Include
 INCS      += -I$(OUT_DIR)/include
 INCS      += -I$(SRC_DIR)/
 
-CFLAGS     = -Wall -g -std=c99 -Os
+CFLAGS     = -Wall -g -std=c99 -Os -Werror
 CFLAGS    += -mlittle-endian -mcpu=cortex-m4 -march=armv7e-m -mthumb
 CFLAGS    += -include $(OUT_DIR)/include/config.h
 ifeq ($(CONFIG_ARCH_HAS_HW_FLOAT),y)

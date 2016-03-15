@@ -313,7 +313,7 @@ void HAL_SPI_ErrorCallback(SPI_HandleTypeDef *_hspi)
   }
 #endif
   else {
-    dbgprintx32("ERR Invalid hspi ", _hspi->Instance, "\r\n");
+    dbgprintx32("ERR Invalid hspi ", (uint32_t)_hspi->Instance, "\r\n");
   }
 }
 
@@ -328,7 +328,7 @@ void HAL_SPI_TxRxCpltCallback(SPI_HandleTypeDef *_hspi)
   }
 #endif
   else {
-    dbgprintx32("TxRx Invalid hspi ", _hspi->Instance, "\r\n");
+    dbgprintx32("TxRx Invalid hspi ", (uint32_t)_hspi->Instance, "\r\n");
   }
 }
 

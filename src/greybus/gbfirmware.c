@@ -30,6 +30,7 @@
 #include <string.h>
 #include <stdbool.h>
 #include <errno.h>
+#include <chipapi.h>
 #include "debug.h"
 #include "boot_main.h"
 #include "greybus.h"
@@ -48,7 +49,6 @@
 #define CPORT_POLLING_TIMEOUT       512
 
 #define MUCLOADER_BASE_ADDR     FLASH_BASE
-#define MUC_SPI_FLASH_STAGE         2
 
 static bool tftf_header_received = false;
 static uint8_t tftf_buff[TFTF_HEADER_SIZE];
@@ -65,6 +65,7 @@ static struct fw_flash_data {
 static uint8_t _gbfw_stage = 0x00;  /* current flashing stage */
 
 static int gbfw_ready_to_boot(uint8_t status);
+static void gbfw_next_stage(void);
 
 static int gbfw_get_version(uint32_t cportid, gb_operation_header *header)
 {
@@ -76,7 +77,8 @@ static int gbfw_get_version(uint32_t cportid, gb_operation_header *header)
 
 static void gbfw_ap_ready_cb(int status, void *cntx)
 {
-   (void)gbfw_firmware_size(GBFW_STAGE_MIN);
+    _gbfw_stage = GBFW_STAGE_MIN;
+    gbfw_next_stage();
 }
 
 static int gbfw_ap_ready(uint32_t cportid, gb_operation_header *header)
@@ -88,12 +90,11 @@ static struct gbfw_firmware_size_response firmware_size_response;
 static int gbfw_firmware_size_response(gb_operation_header *head, void *data,
                                        uint32_t len);
 
-int gbfw_firmware_size(uint8_t stage)
+static int gbfw_firmware_size(uint8_t stage)
 {
     int rc;
     struct gbfw_firmware_size_request req = {stage};
     uint16_t msg_id = greybus_get_next_id();
-    _gbfw_stage = stage;
 
     rc = greybus_send_request(gbfw_cportid, msg_id, GB_FW_OP_FIRMWARE_SIZE,
                               (uint8_t*)&req, sizeof(req), NULL);
@@ -106,20 +107,36 @@ int gbfw_firmware_size(uint8_t stage)
 
 static void gbfw_next_stage(void)
 {
+    uint8_t valid_stage_mask = 0x00;
+
     memset(&fw_flash_data, 0, sizeof(fw_flash_data));
     tftf_header_received = false;
 
-    if (_gbfw_stage >= GBFW_STAGE_MIN && _gbfw_stage < GBFW_STAGE_MAX) {
-        gbfw_firmware_size(_gbfw_stage + 1);
-    } else {
-        gbfw_ready_to_boot(GB_FW_BOOT_STATUS_SECURE);
+    if (!chip_bootloader_is_readonly()) {
+        valid_stage_mask |= 1 << GBFW_STAGE_BOOTLOADER;
     }
+#ifdef CONFIG_APBE_FLASH
+    valid_stage_mask |= 1 << GBFW_STAGE_APBE_SPI_FLASH;
+#endif
+    valid_stage_mask |= 1 << GBFW_STAGE_MAIN;
+
+    while (_gbfw_stage <= GBFW_STAGE_MAX) {
+        if ((1 << _gbfw_stage) & valid_stage_mask) {
+            gbfw_firmware_size(_gbfw_stage);
+            _gbfw_stage++;
+            return;
+        }
+        _gbfw_stage++;
+    }
+
+    if (_gbfw_stage >= GBFW_STAGE_MAX)
+        gbfw_ready_to_boot(GB_FW_BOOT_STATUS_SECURE);
 }
 
 #ifdef CONFIG_APBE_FLASH
 static bool gbfw_is_apbe_flash_stage(void)
 {
-   return _gbfw_stage == MUC_SPI_FLASH_STAGE ? true : false;
+   return _gbfw_stage == GBFW_STAGE_APBE_SPI_FLASH ? true : false;
 }
 #endif
 

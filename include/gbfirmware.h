@@ -56,6 +56,10 @@ extern uint32_t gbfw_cportid;
 #define GBFW_STAGE_MIN             0x01
 #define GBFW_STAGE_MAX             0x03
 
+#define GBFW_STAGE_BOOTLOADER      0x01
+#define GBFW_STAGE_APBE_SPI_FLASH  0x02
+#define GBFW_STAGE_MAIN            0x03
+
 /* Greybus FirmWare request and response payloads */
 struct __attribute__ ((__packed__)) gbfw_protocol_version_request {
   uint8_t major, minor;
@@ -78,7 +82,6 @@ struct __attribute__ ((__packed__)) gbfw_ready_to_boot_request {
 };
 
 extern int fw_cport_handler(uint32_t cportid, void *data, size_t len);
-extern int gbfw_firmware_size(uint8_t stage);
 
 int greybus_cport_connect(void);
 int greybus_cport_disconnect(void);

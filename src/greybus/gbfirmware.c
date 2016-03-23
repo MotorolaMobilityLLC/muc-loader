@@ -228,9 +228,11 @@ static int gbfw_get_firmware_response(gb_operation_header *header, void *data,
             flash_addr = fw_flash_data.fw_flash_addr + fw_flash_data.fw_offset;
             flash_data_size = fw_flash_data.fw_request_size - TFTF_HEADER_SIZE;
 
+#ifdef CONFIG_DEBUG_FIRMWARE
             dbgprint("FLADR:");
             dbgprinthex32(flash_addr);
             dbgprint("\r\n");
+#endif
 
             program_flash_data(flash_addr, flash_data_size, data_ptr);
          }
@@ -238,9 +240,11 @@ static int gbfw_get_firmware_response(gb_operation_header *header, void *data,
         fw_flash_data.fw_offset += (fw_flash_data.fw_request_size - TFTF_HEADER_SIZE);
         fw_flash_data.fw_remaining_size -= (fw_flash_data.fw_request_size - TFTF_HEADER_SIZE);
 
+#ifdef CONFIG_DEBUG_FIRMWARE
         dbgprint("off:");
         dbgprinthex32(fw_flash_data.fw_offset + TFTF_HEADER_SIZE);
         dbgprint("\r\n");
+#endif
 
         /* Calculate the size for get firmware request */
         pl_data_size = gbfw_get_payload_size();
@@ -261,12 +265,14 @@ static int gbfw_get_firmware_response(gb_operation_header *header, void *data,
             flash_addr = fw_flash_data.fw_flash_addr + fw_flash_data.fw_offset;
             flash_data_size = fw_flash_data.new_payload_size;
 
+#ifdef CONFIG_DEBUG_FIRMWARE
             dbgprint("FLADR:");
             dbgprinthex32(flash_addr);
             dbgprint("\r\n");
             dbgprint("PLSZ:");
             dbgprinthex32(flash_data_size);
             dbgprint("\r\n");
+#endif
 
             program_flash_data(flash_addr, flash_data_size, data_ptr);
         }
@@ -274,12 +280,14 @@ static int gbfw_get_firmware_response(gb_operation_header *header, void *data,
         fw_flash_data.fw_offset += flash_data_size;
         fw_flash_data.fw_remaining_size -= flash_data_size;
 
+#ifdef CONFIG_DEBUG_FIRMWARE
         dbgprint("off:");
         dbgprinthex32(fw_flash_data.fw_offset + TFTF_HEADER_SIZE);
         dbgprint("\r\n");
         dbgprint("Rem:");
         dbgprinthex32(fw_flash_data.fw_remaining_size);
         dbgprint("\r\n");
+#endif
     }
 
     if(fw_flash_data.fw_remaining_size > 0) {
@@ -289,9 +297,11 @@ static int gbfw_get_firmware_response(gb_operation_header *header, void *data,
             fw_flash_data.new_payload_size = fw_flash_data.fw_request_size;
         }
 
+#ifdef CONFIG_DEBUG_FIRMWARE
         dbgprint("Req:");
         dbgprinthex32(fw_flash_data.new_payload_size);
         dbgprint("\r\n");
+#endif
         gbfw_get_firmware(fw_flash_data.fw_offset + TFTF_HEADER_SIZE,
                           fw_flash_data.new_payload_size);
     } else {

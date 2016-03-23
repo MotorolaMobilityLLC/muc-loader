@@ -83,7 +83,11 @@ extern void mods_muc_set_spi1_cs(PinState ps);
 
 /* from main.c */
 extern void SystemClock_Config(void);
+#ifdef _DEBUG
 extern void MX_USART_UART_Init(void);
+#else
+static inline void MX_USART_UART_Init(void) {}
+#endif
 extern void MX_GPIO_Init(void);
 extern void MX_DMA_Init(void);
 extern int get_chip_uid(uint64_t *uid_high, uint64_t *uid_low);

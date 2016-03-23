@@ -33,7 +33,9 @@
 
 #include <stm32_defs.h>
 
+#ifdef CONFIG_DEBUG
 static UART_HandleTypeDef huart;
+#endif
 
 #define OTP_BASE_ADDR      0x1FFF7000
 /* Each OTP block is 8 bytes(double word) */
@@ -122,6 +124,7 @@ void SystemClock_Config(void)
   HAL_RCCEx_PeriphCLKConfig(&PeriphClkInit);
 }
 
+#ifdef _DEBUG
 /* USART init function */
 void MX_USART_UART_Init(void)
 {
@@ -139,6 +142,7 @@ void MX_USART_UART_Init(void)
   huart.AdvancedInit.AdvFeatureInit = UART_ADVFEATURE_NO_INIT;
   HAL_UART_Init(&huart);
 }
+#endif
 
 /**
   * Enable DMA controller clock

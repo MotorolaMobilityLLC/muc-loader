@@ -65,7 +65,6 @@ ifeq ($(CONFIG_DEBUG),y)
 DEFS      += -D_DEBUG
 endif
 
-
 # core version represents the slego part configuration
 CONFIG_ROOT_VERSION ?= 0
 
@@ -108,7 +107,7 @@ CSRCS      += $(CHIPSET_LC)_hal_msp.c
 CSRCS      += $(CHIPSET_LC)_it.c
 CSRCS      += $(CHIPSET_LC)_flash.c
 
-CSRCS      += debug.c \
+CSRCS      += \
 	      utils.c \
 	      gbcore.c \
 	      ctrl.c \
@@ -142,9 +141,13 @@ CSRCS      += $(CHIPSET_LC)_hal_rcc.c \
               $(CHIPSET_LC)_hal_dma.c  \
               $(CHIPSET_LC)_hal_flash.c \
               $(CHIPSET_LC)_hal_flash_ex.c \
-              $(CHIPSET_LC)_hal_uart.c \
               $(CHIPSET_LC)_hal_uart_ex.c \
               $(CHIPSET_LC)_hal_pwr_ex.c
+
+ifeq ($(CONFIG_DEBUG),y)
+CSRCS      += debug.c
+CSRCS      += $(CHIPSET_LC)_hal_uart.c
+endif
 
 # STARTUP_S should be defined in the product Make.defs file
 SSRCS       = $(STARTUP_S)

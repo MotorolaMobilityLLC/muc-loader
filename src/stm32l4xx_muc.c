@@ -38,10 +38,12 @@ static UART_HandleTypeDef huart;
 #endif
 
 #define OTP_BASE_ADDR      0x1FFF7000
+#define OTP_WRPA_ADDR      0x1FFF7818
+
 /* Each OTP block is 8 bytes(double word) */
 #define MAX_OTP_BLOCKS  128
-#define OTP_BLOCK_SIZE  8
-#define MAX_KEY_REVOKES 16
+#define OTP_BLOCK_SIZE    8
+#define MAX_KEY_REVOKES  16
 
 struct otp_registers {
   uint64_t key_revoked[MAX_KEY_REVOKES];
@@ -210,4 +212,23 @@ int chip_is_key_revoked(int index)
     return 1;
   }
   return 0;
+}
+
+/**
+ * Is the bootloader read only
+ */
+bool chip_bootloader_is_readonly(void)
+{
+#ifdef CONFIG_RUN_FROM_FLASH
+    return true;
+#else
+    uint32_t wrp1a = getreg32(OTP_WRPA_ADDR);
+    uint32_t wrp1a_start_page = (wrp1a) & 0x000000FF;
+
+    /* Are any pages in the bootloader write protected */
+    if ((wrp1a_start_page < 16))
+        return true;
+    else
+        return false;
+#endif
 }

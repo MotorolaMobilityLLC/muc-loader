@@ -32,6 +32,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
+#include <stdbool.h>
 
 /**
  * @brief check if a crypto key has been revoked
@@ -46,4 +47,9 @@ extern int chip_is_key_revoked(int index);
  */
 extern void chip_reset_irqs(void);
 
+/**
+ * @brief Is the bootloader read-only
+ * @return true if the device is in release mode
+ */
+extern bool chip_bootloader_is_readonly(void);
 #endif /* __CHIPAPI_H */

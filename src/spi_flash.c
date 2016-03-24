@@ -56,16 +56,35 @@ enum {
 
 static volatile uint32_t wTransferState = TRANSFER_WAIT;
 static uint32_t dst = FLASH_START;
+static uint32_t total_section_length;
 
 void spi_flash_hal_init(void)
 {
     device_spi_flash_init(&hspi_flash);
 }
 
-int spi_write_to_flash_header(const data_write_ops *ops, void *data) {
-
-    uint32_t total_section_length = 0;
+int spi_write_calc_total_len(void *data)
+{
+    tftf_header *tf_header = (tftf_header *)data;
+    tftf_section_descriptor *section = tf_header->sections;
     uint32_t num_sections = 0;
+
+    total_section_length = 0;
+    while (section->section_type != TFTF_SECTION_END) {
+        total_section_length += section->section_length;
+        num_sections++;
+        section++;
+    }
+#ifdef CONFIG_DEBUG_SPI_FLASH
+    dbgprintx32("spi flash tftf num_sections ",  num_sections, "\r\n");
+    dbgprintx32("spi flash tftf total_section_length ", total_section_length, "\r\n");
+#endif
+
+    return total_section_length;
+}
+
+int spi_write_to_flash_header(const data_write_ops *ops, void *data)
+{
     int result = 0;
     tftf_header *tf_header = (tftf_header *)data;
     ffff_header tmp_header;
@@ -77,15 +96,6 @@ int spi_write_to_flash_header(const data_write_ops *ops, void *data) {
     if (result) {
         goto error;
     }
-
-    tftf_section_descriptor *section = tf_header->sections;
-    while (section->section_type != TFTF_SECTION_END) {
-        total_section_length += section->section_length;
-        num_sections++;
-        section++;
-    }
-    dbgprintx32("spi flash tftf num_sections ",  num_sections, "\r\n");
-    dbgprintx32("spi flash tftf total_section_length ", total_section_length, "\r\n");
 
     memset(&tmp_header, 0, sizeof(tmp_header));
     memcpy(tmp_header.sentinel_value, FFFF_SENTINEL_VALUE,
@@ -142,6 +152,7 @@ void spi_write_to_flash_finish(const data_write_ops *ops)
     dbgprint("spi_write_to_flash_finish\r\n");
     ops->finish();
     dst = FLASH_START;
+    total_section_length = 0;
 }
 
 static void Error_Handler(SPI_HandleTypeDef *hspi)

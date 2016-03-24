@@ -46,5 +46,6 @@ extern int chip_spi_exchange(void *txbuffer, void *rxbuffer, uint32_t nbytes);
 extern void chip_delay(uint32_t msec);
 extern void spi_flash_error_handler(SPI_HandleTypeDef *_hspi);
 extern void spi_flash_hal_init(void);
+extern int spi_write_calc_total_len(void *data);
 
 #endif

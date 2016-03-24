@@ -145,7 +145,12 @@ static int gbfw_firmware_size_response(gb_operation_header *head, void *data,
         int rc;
         struct gbfw_get_firmware_request req = {0, TFTF_HEADER_SIZE};
         uint16_t msg_id = greybus_get_next_id();
-
+#ifdef CONFIG_APBE_FLASH
+        if (gbfw_is_apbe_flash_stage()) {
+            req.offset = TFTF_HEADER_SIZE;
+            firmware_size_response.size -= TFTF_HEADER_SIZE;
+        }
+#endif
         rc = greybus_send_request(gbfw_cportid, msg_id, GB_FW_OP_GET_FIRMWARE,
                                   (uint8_t*)&req, sizeof(req), NULL);
         if (rc) {
@@ -214,7 +219,16 @@ static int gbfw_get_firmware_response(gb_operation_header *header, void *data,
         fw_flash_data.new_payload_size = 0;
 #ifdef CONFIG_APBE_FLASH
         if (gbfw_is_apbe_flash_stage()) {
-             dbgprint("spi flash header\r\n");
+             /*
+              * apbe stage 2 image is wrapped with a TFTF header with muc id's
+              * and a muc signature section, need to skip requesting muc signature
+              * and muc tftf header, so initialize offset to TFTF_HEADER_SIZE, and
+              * remaining size to difference between total firmware size and apbe
+              * image size.
+              */
+             fw_flash_data.fw_offset = TFTF_HEADER_SIZE;
+             fw_flash_data.fw_remaining_size -= ((firmware_size_response.size - TFTF_HEADER_SIZE)
+                                        - spi_write_calc_total_len(data));
              spi_write_to_flash_header(&spi_write_ops, data);
         } else
 #endif

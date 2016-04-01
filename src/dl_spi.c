@@ -61,6 +61,12 @@
 #define MSG_TYPE_DL    (0 << 6)     /* Packet for/from data link layer */
 #define MSG_TYPE_NW    (1 << 6)     /* Packet for/from network layer */
 
+/* Possible values for bus config features */
+#define DL_BIT_ACK     (1 << 0)     /* Flag to indicate ACKing is supported */
+
+#define DL_NUM_TRIES          3     /* number of times to try sending a message */
+#define DL_ACK_TIMEOUT_MS   100     /* 100 milliseconds */
+
 static SPI_HandleTypeDef gb_hspi;
 
 /* Buffer used for transmission */
@@ -99,6 +105,8 @@ static struct {
     msg_sent_cb     sent_cb;
     void            *sent_ctx;
     bool            respReady;
+    bool            ack_supported;   /* Core and mod support ACK'ing on success */
+    int             tx_remaining;    /* Number of sends remaining */
 } g_spi_data;
 
 /* TODO: migrate to gbcore.c */
@@ -143,6 +151,8 @@ void dl_init(void)
     mods_muc_int_set(PIN_RESET);
     g_spi_data.respReady = false;
     g_spi_data.armDMA = true;
+    g_spi_data.ack_supported = false;
+    g_spi_data.tx_remaining = DL_NUM_TRIES;
     dl_set_sent_cb(NULL, NULL);
     g_spi_data.payload_size = INITIAL_DMA_BUF_SIZE;
 }
@@ -207,6 +217,15 @@ static int dl_bus_config(struct spi_dl_msg *dl_msg)
         MAX_NW_PL_SIZE
     };
 
+#ifdef CONFIG_GREYBUS_MODS_ACK
+    if (req->features & DL_BIT_ACK) {
+        g_spi_data.ack_supported = true;
+        resp.features |= DL_BIT_ACK;
+    }
+#ifdef CONFIG_DEBUG_DATALINK
+    dbgprintx32("ack_supported = ", g_spi_data.ack_supported, "\r\n");
+#endif
+#endif
 
     if (req->max_pl_size < MAX_NW_PL_SIZE) {
         resp.pl_size = req->max_pl_size;
@@ -259,6 +278,92 @@ static void dump(void)
   dbgprintx32("armDMA    ", g_spi_data.armDMA, "\r\n");
 }
 
+/*
+ * returns: true if the messages were acknowledged successfully
+ *          (or the caller should behave as if they were) and
+ *          can delete the message.
+ */
+static bool ack_handler(bool tx_attempted, bool rx_success)
+{
+#ifdef CONFIG_GREYBUS_MODS_ACK
+    uint32_t start;
+    uint8_t ack;
+    uint8_t wake_n = 0;
+    uint8_t timeout = 0;
+#ifdef CONFIG_DEBUG_DATALINK
+    uint32_t dbg_tx_rx = tx_attempted << 16 | rx_success;
+    dbgprintx32("ack_handler 0x", dbg_tx_rx, "\r\n");
+#endif
+
+    if (!g_spi_data.ack_supported)
+        return true;
+
+    start = mods_getms();
+
+#ifdef CONFIG_DEBUG_DATALINK
+    dbgprintx32("start 0x", start, "\r\n");
+#endif
+
+    /* We successfully received a message so Send ACK to base */
+    mods_ack_received(rx_success ? 1 : 0);
+
+    /* We transmitted something so look for ACK from base */
+    mods_ack_transmitted_setup();
+    if (tx_attempted) {
+        do {
+            ack = mods_ack_transmitted_get();
+            wake_n = mods_wake_n_get();
+            timeout = ((mods_getms() - start) >= DL_ACK_TIMEOUT_MS);
+        } while (!ack && wake_n && !timeout);
+
+        if (!ack && wake_n) {
+           /*
+            * Since both TX and RX (potentially) failed, need
+            * to spin longer to ensure base does not see false ACK.
+            */
+            if (!rx_success) {
+                do {
+                    wake_n = mods_wake_n_get();
+                    timeout = (mods_getms() - start) >= (2 * DL_ACK_TIMEOUT_MS);
+                } while (wake_n && !timeout);
+            }
+
+            if (--g_spi_data.tx_remaining > 0) {
+#ifdef CONFIG_DEBUG_DATALINK
+                dbgprint("Retry: No ACK received\r\n");
+#endif
+                return false;
+            } else {
+#ifdef CONFIG_DEBUG_DATALINK
+                dbgprint("Abort: No ACK received\r\n");
+#endif
+                g_spi_data.tx_remaining = DL_NUM_TRIES;
+                return true;
+            }
+        } else if (g_spi_data.tx_remaining != DL_NUM_TRIES) {
+#ifdef CONFIG_DEBUG_DATALINK
+            dbgprint("Retry successful\r\n");
+#endif
+            g_spi_data.tx_remaining = DL_NUM_TRIES;
+        }
+    }
+
+    if (!rx_success) {
+        /* Must block long enough to ensure base does not see false ACK. */
+        do {
+            wake_n = mods_wake_n_get();
+            timeout = ((mods_getms() - start) >= (2 * DL_ACK_TIMEOUT_MS));
+        } while (wake_n && !timeout);
+
+        /* If here, there either was no TX or the TX was successful and ACK'd,
+         * so it is okay to return true.
+         */
+        return true;
+    }
+#endif
+    return true;
+}
+
 static inline bool dl_is_msg_valid_rx(void *msg)
 {
     struct spi_msg *spi_msg = (struct spi_msg *)msg;
@@ -270,6 +375,9 @@ static int dl_process_msg(void)
 {
     struct spi_msg *spi_msg = (struct spi_msg *)aRxBuffer;
     bool rx_valid = dl_is_msg_valid_rx(aRxBuffer);
+    bool tx_retry = false;
+
+    tx_retry = !ack_handler(g_spi_data.respReady, rx_valid);
 
     if (rx_valid) {
         if ((spi_msg->hdr.bits & HDR_BIT_TYPE) == MSG_TYPE_NW) {
@@ -285,28 +393,38 @@ static int dl_process_msg(void)
         /* we were sending a message so handle it */
         mods_rfr_set(PIN_RESET);
         mods_muc_int_set(PIN_RESET);
-        g_spi_data.respReady = false;
+        if (!tx_retry) {
+            g_spi_data.respReady = false;
+            memset(aTxBuffer, 0, MAX_DMA_BUF_SIZE);
+        }
         dl_call_sent_cb(0);
     } else {
         dbgprint("UNEXPECTED MSG!!\r\n");
         dump();
     }
+
+    memset(aRxBuffer, 0, MAX_DMA_BUF_SIZE);
     return 0;
 }
 
 static void Error_Handler(SPI_HandleTypeDef *_hspi)
 {
+  bool tx_retry = false;
+
   mods_rfr_set(PIN_RESET);
   mods_muc_int_set(PIN_RESET);
-  g_spi_data.respReady = false;
   _hspi->Instance->CR1 |= (SPI_CR1_SSM | SPI_CR1_SSI);
 
+  tx_retry = !ack_handler(g_spi_data.respReady, false);
+  if (!tx_retry)
+    g_spi_data.respReady = false;
   dbgprintx32("SPIERR : 0x", _hspi->ErrorCode, "\r\n");
   dump();
   HAL_SPI_DeInit(_hspi);
   mod_dev_base_spi_reset();
   device_spi_mod_init(_hspi);
-  memset(aTxBuffer, 0, MAX_DMA_BUF_SIZE);
+  if (!tx_retry)
+    memset(aTxBuffer, 0, MAX_DMA_BUF_SIZE);
   memset(aRxBuffer, 0, MAX_DMA_BUF_SIZE);
   g_spi_data.armDMA = true;
 }
@@ -329,9 +447,7 @@ void dl_spi_transfer_complete(SPI_HandleTypeDef *_hspi)
   dbgprint("TxRxCpltCB\r\n");
 #endif
 
-  memset(aTxBuffer, 0, MAX_DMA_BUF_SIZE);
   dl_process_msg();
-  memset(aRxBuffer, 0, MAX_DMA_BUF_SIZE);
 
   g_spi_data.armDMA = true;
 }
@@ -359,6 +475,7 @@ void setup_exchange(void)
       g_spi_data.armDMA = false;
 
       /* We are ready to send, allow the hardware to manage the NSS */
+      mods_spi_restore();
       gb_hspi.Instance->CR1 &= ~(SPI_CR1_SSM | SPI_CR1_SSI);
       mods_rfr_set(PIN_SET);
       mods_muc_int_set(PIN_SET);
@@ -380,6 +497,7 @@ void setup_exchange(void)
       g_spi_data.armDMA = false;
 
       /* We are ready to receive, allow the hardware to manage the NSS */
+      mods_spi_restore();
       gb_hspi.Instance->CR1 &= ~(SPI_CR1_SSM | SPI_CR1_SSI);
       mods_rfr_set(PIN_SET);
     }

@@ -34,4 +34,8 @@
 
 /* COMMON defines for all products */
 
+#define GPIO_MODS_SPI_PORT              GPIOB
+#define GPIO_MODS_SPI_MISO_PIN          GPIO_PIN_14
+#define GPIO_MODS_SPI_MOSI_PIN          GPIO_PIN_15
+
 #endif

@@ -68,6 +68,70 @@ PinState mods_muc_int_get(void)
     return HAL_GPIO_ReadPin(GPIO_PORT_MUC_INT, GPIO_PIN_MUC_INT);
 }
 
+/**
+ * Get the time in milliseconds.
+ */
+uint32_t mods_getms(void)
+{
+    return HAL_GetTick();
+}
+
+/**
+ * Set the MISO line to reflect the ACK or NACK of the
+ * message from the core.
+ */
+void mods_ack_received(bool rx_success)
+{
+    GPIO_InitTypeDef GPIO_InitStruct;
+    PinState pstate = rx_success ? PIN_SET : PIN_RESET;
+
+    GPIO_InitStruct.Pin = GPIO_MODS_SPI_MISO_PIN;
+    GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+    GPIO_InitStruct.Pull = GPIO_NOPULL;
+    GPIO_InitStruct.Speed = GPIO_SPEED_HIGH;
+    HAL_GPIO_Init(GPIO_MODS_SPI_PORT, &GPIO_InitStruct);
+
+    HAL_GPIO_WritePin(GPIO_MODS_SPI_PORT, GPIO_MODS_SPI_MISO_PIN, pstate);
+}
+
+/**
+ * Set the MOSI line as a gpio input so we can
+ * read the ack back from the base
+ */
+void mods_ack_transmitted_setup(void)
+{
+    GPIO_InitTypeDef GPIO_InitStruct;
+
+    GPIO_InitStruct.Pin = GPIO_MODS_SPI_MOSI_PIN;
+    GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
+    GPIO_InitStruct.Pull = GPIO_NOPULL;
+    GPIO_InitStruct.Speed = GPIO_SPEED_HIGH;
+    HAL_GPIO_Init(GPIO_MODS_SPI_PORT, &GPIO_InitStruct);
+}
+
+/**
+ * See if the transmitted value has been ACK'ed
+ */
+uint8_t mods_ack_transmitted_get(void)
+{
+    return HAL_GPIO_ReadPin(GPIO_MODS_SPI_PORT, GPIO_MODS_SPI_MOSI_PIN);
+}
+
+/**
+ * Undo the configuration of the MISO and MOSI lines as a gpios.
+ */
+void mods_spi_restore(void)
+{
+    GPIO_InitTypeDef GPIO_InitStruct;
+
+    GPIO_InitStruct.Pin = GPIO_MODS_SPI_MISO_PIN | GPIO_MODS_SPI_MOSI_PIN;
+    GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
+    GPIO_InitStruct.Pull = GPIO_NOPULL;
+    GPIO_InitStruct.Speed = GPIO_SPEED_HIGH;
+    GPIO_InitStruct.Alternate = GPIO_AF5_SPI2;
+    HAL_GPIO_Init(GPIO_MODS_SPI_PORT, &GPIO_InitStruct);
+}
+
 void SPI_NSS_INT_CTRL_Config(void)
 {
   GPIO_InitTypeDef GPIO_InitStruct;

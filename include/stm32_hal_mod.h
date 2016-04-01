@@ -54,6 +54,11 @@ extern void mods_muc_int_set(PinState pstate);
 extern PinState mods_muc_get_spi_sel(void);
 extern void mods_muc_spi_sel(PinState pstate);
 extern PinState mods_muc_int_get(void);
+extern uint32_t mods_getms(void);
+extern void mods_ack_received(bool rx_success);
+extern uint8_t mods_ack_transmitted_get(void);
+extern void mods_ack_transmitted_setup(void);
+extern void mods_spi_restore(void);
 extern void SPI_NSS_INT_CTRL_Config(void);
 
 extern void mods_gpio_clk_enable(void);

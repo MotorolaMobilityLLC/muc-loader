@@ -247,7 +247,7 @@ static void dump(void)
   dbgprintx32("armDMA    ", g_spi_data.armDMA, "\r\n");
 }
 
-int dl_process_msg(void *msg)
+static int dl_process_msg(void *msg)
 {
     struct spi_msg *spi_msg = (struct spi_msg *)msg;
 

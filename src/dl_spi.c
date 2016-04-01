@@ -42,6 +42,18 @@
 #include "datalink.h"
 #include "network.h"
 
+/* HEADER BITS FORMAT
+ *
+ * |  F  |  E  |  D  |  C  |  B  |  A  |  9  |  8  |
+ * |-----+-----+-----+-----+-----+-----+-----+-----|
+ * |                                         | PKT1|
+ *
+ *
+ * |  7  |  6  |  5  |  4  |  3  |  2  |  1  |  0  |
+ * |-----+-----+-----+-----+-----+-----+-----+-----|
+ * |VALID|TYPE |< -----        PKTS        ----- > |
+ */
+#define HDR_BIT_PKT1   (0x01 << 8)  /* 1 = first packet of message */
 #define HDR_BIT_VALID  (0x01 << 7)  /* 1 = valid packet, 0 = dummy packet */
 #define HDR_BIT_TYPE   (0x01 << 6)  /* SPI message type, datalink or network */
 #define HDR_BIT_PKTS   (0x3F << 0)  /* How many additional packets to expect */
@@ -56,8 +68,7 @@ uint8_t aTxBuffer[MAX_DMA_BUF_SIZE];
 uint8_t aRxBuffer[MAX_DMA_BUF_SIZE];
 
 struct spi_msg_hdr {
-        uint8_t bits;
-        uint8_t rsvd;
+        uint16_t bits;
 } __attribute__ ((packed));
 
 struct spi_msg {
@@ -71,13 +82,15 @@ struct spi_dl_msg
     uint8_t  payload[0];
 } __attribute__ ((packed));
 
-struct dl_muc_bus_config_request {
-    uint16_t max_payload_size;
+struct dl_muc_bus_config_req {
+    uint16_t max_pl_size;            /* Maximum payload size supported by base */
+    uint8_t  features;               /* See DL_BIT_* defines for values */
 } __attribute__ ((__packed__));
 
-struct dl_muc_bus_config_response {
-    uint32_t max_bus_speed;
-    uint16_t sel_payload_size;
+struct dl_muc_bus_config_resp {
+    uint32_t max_speed;              /* Maximum bus speed supported by the mod */
+    uint16_t pl_size;                /* Payload size that mod has selected to use */
+    uint8_t  features;               /* See DL_BIT_* defines for values */
 } __attribute__ ((__packed__));
 
 static struct {
@@ -187,28 +200,27 @@ static void dl_bus_config_cb(int status, void *data)
 
 static int dl_bus_config(struct spi_dl_msg *dl_msg)
 {
-    uint16_t recved_max_pl_size;
-    static struct dl_muc_bus_config_response payload = {
+    struct dl_muc_bus_config_req *req =
+            (struct dl_muc_bus_config_req *)dl_msg->payload;
+    static struct dl_muc_bus_config_resp resp = {
         15000000,
         MAX_NW_PL_SIZE
     };
 
-    memcpy(&recved_max_pl_size, &dl_msg->payload[0], sizeof(uint16_t));
-    payload.max_bus_speed = 0;
 
-    if (recved_max_pl_size < MAX_NW_PL_SIZE) {
-        payload.sel_payload_size = recved_max_pl_size;
+    if (req->max_pl_size < MAX_NW_PL_SIZE) {
+        resp.pl_size = req->max_pl_size;
     } else {
-        payload.sel_payload_size = MAX_NW_PL_SIZE;
+        resp.pl_size = MAX_NW_PL_SIZE;
     }
 #ifdef CONFIG_DEBUG_DATALINK
-    dbgprintx32("dl_bus_config(0x", payload.max_bus_speed, ",");
-    dbgprintx32(" 0x", payload.sel_payload_size, ")\r\n");
+    dbgprintx32("dl_bus_config(0x", resp.max_speed, ",");
+    dbgprintx32(" 0x", resp.pl_size, ")\r\n");
 #endif
 
-    return dl_send_dl_msg(dl_msg->mesg_id, GB_TYPE_RESPONSE, (uint8_t *)&payload,
-                          sizeof(payload), dl_bus_config_cb,
-                          (void *)(uint32_t)payload.sel_payload_size);
+    return dl_send_dl_msg(dl_msg->mesg_id, GB_TYPE_RESPONSE, (uint8_t *)&resp,
+                          sizeof(resp), dl_bus_config_cb,
+                          (void *)(uint32_t)resp.pl_size);
 }
 
 int dl_muc_handler(void *msg)
@@ -247,11 +259,19 @@ static void dump(void)
   dbgprintx32("armDMA    ", g_spi_data.armDMA, "\r\n");
 }
 
-static int dl_process_msg(void *msg)
+static inline bool dl_is_msg_valid_rx(void *msg)
 {
     struct spi_msg *spi_msg = (struct spi_msg *)msg;
 
-    if (spi_msg->hdr.bits & HDR_BIT_VALID) {
+    return (spi_msg->hdr.bits & HDR_BIT_VALID);
+}
+
+static int dl_process_msg(void)
+{
+    struct spi_msg *spi_msg = (struct spi_msg *)aRxBuffer;
+    bool rx_valid = dl_is_msg_valid_rx(aRxBuffer);
+
+    if (rx_valid) {
         if ((spi_msg->hdr.bits & HDR_BIT_TYPE) == MSG_TYPE_NW) {
             /* Send up to network layer */
             network_recv(spi_msg->payload, g_spi_data.payload_size);
@@ -271,7 +291,7 @@ static int dl_process_msg(void *msg)
         dbgprint("UNEXPECTED MSG!!\r\n");
         dump();
     }
-  return 0;
+    return 0;
 }
 
 static void Error_Handler(SPI_HandleTypeDef *_hspi)
@@ -310,7 +330,7 @@ void dl_spi_transfer_complete(SPI_HandleTypeDef *_hspi)
 #endif
 
   memset(aTxBuffer, 0, MAX_DMA_BUF_SIZE);
-  dl_process_msg((struct mods_spi_msg *)aRxBuffer);
+  dl_process_msg();
   memset(aRxBuffer, 0, MAX_DMA_BUF_SIZE);
 
   g_spi_data.armDMA = true;

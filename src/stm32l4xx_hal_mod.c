@@ -27,7 +27,7 @@
  */
 
 #include <stm32_hal_mod.h>
-#include <stm32_mod_device.h>
+#include <mod_device.h>
 
 #define STM32_UID_BASE       0x1fff7590     /* 0x1fff7590-0x1fff759b: UID */
 #define getreg32(a)         (*(volatile uint32_t *)(a))

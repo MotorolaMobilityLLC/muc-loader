@@ -46,15 +46,31 @@
  *
  * |  F  |  E  |  D  |  C  |  B  |  A  |  9  |  8  |
  * |-----+-----+-----+-----+-----+-----+-----+-----|
- * |                                         | PKT1|
+ * |              RESERVED             | DMY | PKT1|
  *
  *
  * |  7  |  6  |  5  |  4  |  3  |  2  |  1  |  0  |
  * |-----+-----+-----+-----+-----+-----+-----+-----|
  * |VALID|TYPE |< -----        PKTS        ----- > |
  */
+
+/* Protocol version supported by this driver */
+#define PROTO_VER           (2)
+
+/* Protocol version change log */
+#define PROTO_VER_PKT1      (1)     /* Version that added PKT1 bit */
+#define PROTO_VER_ACK       (1)     /* Minimum version for ACK support */
+#define PROTO_VER_DUMMY     (2)     /* Version that added DUMMY bit */
+
+/*
+ * Protocol version support macro for checking if the requested feature (f)
+ * is supported by the attached MuC.
+ */
+#define BASE_SUPPORTS(d, f) ((d)->proto_ver >= PROTO_VER_##f)
+
+#define HDR_BIT_DUMMY  (0x01 << 9)  /* 1 = dummy packet */
 #define HDR_BIT_PKT1   (0x01 << 8)  /* 1 = first packet of message */
-#define HDR_BIT_VALID  (0x01 << 7)  /* 1 = valid packet, 0 = dummy packet */
+#define HDR_BIT_VALID  (0x01 << 7)  /* 1 = packet has valid payload */
 #define HDR_BIT_TYPE   (0x01 << 6)  /* SPI message type, datalink or network */
 #define HDR_BIT_PKTS   (0x3F << 0)  /* How many additional packets to expect */
 
@@ -66,6 +82,13 @@
 
 #define DL_NUM_TRIES          3     /* number of times to try sending a message */
 #define DL_ACK_TIMEOUT_MS   100     /* 100 milliseconds */
+
+enum ack
+{
+  ACK_NEEDED,
+  ACK_NOT_NEEDED,
+  ACK_ERROR,
+};
 
 static SPI_HandleTypeDef gb_hspi;
 
@@ -91,12 +114,14 @@ struct spi_dl_msg
 struct dl_muc_bus_config_req {
     uint16_t max_pl_size;            /* Maximum payload size supported by base */
     uint8_t  features;               /* See DL_BIT_* defines for values */
+    uint8_t  version;                /* SPI msg format version of base */
 } __attribute__ ((__packed__));
 
 struct dl_muc_bus_config_resp {
     uint32_t max_speed;              /* Maximum bus speed supported by the mod */
     uint16_t pl_size;                /* Payload size that mod has selected to use */
     uint8_t  features;               /* See DL_BIT_* defines for values */
+    uint8_t  version;                /* SPI msg format version supported by mod */
 } __attribute__ ((__packed__));
 
 static struct {
@@ -107,12 +132,43 @@ static struct {
     bool            respReady;
     bool            ack_supported;   /* Core and mod support ACK'ing on success */
     int             tx_remaining;    /* Number of sends remaining */
+    uint8_t         proto_ver;       /* Protocol version supported by base */
 } g_spi_data;
 
 /* TODO: migrate to gbcore.c */
 struct gb_operation_hdr *greybus_get_operation_header(void)
 {
     return (struct gb_operation_hdr *)&aTxBuffer[DL_HEADER_BITS_SIZE + NW_HEADER_SIZE];
+}
+
+static inline void dl_set_txp_hdr(uint8_t *buf, uint16_t bits)
+{
+    struct spi_msg_hdr *hdr = (struct spi_msg_hdr *)buf;
+
+    hdr->bits = bits;
+}
+
+static inline void dl_setup_for_dummy_tx(void)
+{
+    memset(aTxBuffer, 0, MAX_DMA_BUF_SIZE);
+    dl_set_txp_hdr(aTxBuffer, HDR_BIT_DUMMY);
+}
+
+static inline bool dl_is_msg_valid_rx(void *msg)
+{
+    struct spi_msg *spi_msg = (struct spi_msg *)msg;
+    uint16_t valid_mask = (HDR_BIT_VALID | HDR_BIT_PKT1);
+
+    return ((spi_msg->hdr.bits & valid_mask) == valid_mask);
+}
+
+static inline bool dl_is_msg_dummy(void *msg)
+{
+    struct spi_msg *spi_msg = (struct spi_msg *)msg;
+
+    return (BASE_SUPPORTS(&g_spi_data, DUMMY)) ?
+            !!(spi_msg->hdr.bits & HDR_BIT_DUMMY) :
+              (spi_msg->hdr.bits == 0);
 }
 
 uint16_t datalink_get_max_payload_size(void)
@@ -155,17 +211,15 @@ void dl_init(void)
     g_spi_data.tx_remaining = DL_NUM_TRIES;
     dl_set_sent_cb(NULL, NULL);
     g_spi_data.payload_size = INITIAL_DMA_BUF_SIZE;
+    g_spi_data.proto_ver = 0;
 }
 
 /* called from network layer */
 /* buf should point to the start of a network message */
 int datalink_send(uint8_t *buf, size_t len, msg_sent_cb cb, void *ctx)
 {
-    struct spi_msg *dl = (struct spi_msg *)&buf[-sizeof(struct spi_msg_hdr)];
-
-    dl->hdr.bits = MSG_TYPE_NW;
-    dl->hdr.bits |= HDR_BIT_VALID;
-
+    dl_set_txp_hdr(&buf[-sizeof(struct spi_msg_hdr)],
+        HDR_BIT_PKT1 | MSG_TYPE_NW | HDR_BIT_VALID);
     g_spi_data.respReady = true;
     dl_set_sent_cb(cb, ctx);
 
@@ -188,9 +242,7 @@ static int dl_send_dl_msg(uint8_t id,
         memcpy(payload, payload_data, payload_size);
     }
 
-    spi_msg->hdr_bits = MSG_TYPE_DL;
-    spi_msg->hdr_bits |= HDR_BIT_VALID;
-
+    dl_set_txp_hdr(&aTxBuffer[0], MSG_TYPE_DL | HDR_BIT_VALID);
     g_spi_data.respReady = true;
     dl_set_sent_cb(cb, ctx);
 
@@ -217,10 +269,22 @@ static int dl_bus_config(struct spi_dl_msg *dl_msg)
         MAX_NW_PL_SIZE
     };
 
+    g_spi_data.proto_ver = req->version;
+
+    resp.version = PROTO_VER;
+    resp.features = 0;
+
 #ifdef CONFIG_GREYBUS_MODS_ACK
     if (req->features & DL_BIT_ACK) {
         g_spi_data.ack_supported = true;
         resp.features |= DL_BIT_ACK;
+
+      /* Bases that support ACKing must use PROTO_VER_ACK or later */
+      if (!BASE_SUPPORTS(&g_spi_data, ACK))
+        {
+          dbgprint("ACK requires newer protocol version\r\n");
+          g_spi_data.proto_ver = PROTO_VER_ACK;
+        }
     }
 #ifdef CONFIG_DEBUG_DATALINK
     dbgprintx32("ack_supported = ", g_spi_data.ack_supported, "\r\n");
@@ -242,6 +306,11 @@ static int dl_bus_config(struct spi_dl_msg *dl_msg)
                           (void *)(uint32_t)resp.pl_size);
 }
 
+/**
+ * @brief handle message at datalink layer
+ * @param msg - datalink message
+ * @returns 0 on success
+ */
 int dl_muc_handler(void *msg)
 {
     struct spi_dl_msg *dl_msg = (struct spi_dl_msg *)msg;
@@ -283,7 +352,7 @@ static void dump(void)
  *          (or the caller should behave as if they were) and
  *          can delete the message.
  */
-static bool ack_handler(bool tx_attempted, bool rx_success)
+static bool ack_handler(bool tx_attempted, enum ack ack_req)
 {
 #ifdef CONFIG_GREYBUS_MODS_ACK
     uint32_t start;
@@ -304,8 +373,8 @@ static bool ack_handler(bool tx_attempted, bool rx_success)
     dbgprintx32("start 0x", start, "\r\n");
 #endif
 
-    /* We successfully received a message so Send ACK to base */
-    mods_ack_received(rx_success ? 1 : 0);
+    /* Send ACK to base (if requested) */
+    mods_ack_received((ack_req == ACK_NEEDED) ? 1 : 0);
 
     /* We transmitted something so look for ACK from base */
     mods_ack_transmitted_setup();
@@ -321,7 +390,7 @@ static bool ack_handler(bool tx_attempted, bool rx_success)
             * Since both TX and RX (potentially) failed, need
             * to spin longer to ensure base does not see false ACK.
             */
-            if (!rx_success) {
+            if (ack_req == ACK_ERROR) {
                 do {
                     wake_n = mods_wake_n_get();
                     timeout = (mods_getms() - start) >= (2 * DL_ACK_TIMEOUT_MS);
@@ -348,7 +417,7 @@ static bool ack_handler(bool tx_attempted, bool rx_success)
         }
     }
 
-    if (!rx_success) {
+    if (ack_req == ACK_ERROR) {
         /* Must block long enough to ensure base does not see false ACK. */
         do {
             wake_n = mods_wake_n_get();
@@ -364,20 +433,23 @@ static bool ack_handler(bool tx_attempted, bool rx_success)
     return true;
 }
 
-static inline bool dl_is_msg_valid_rx(void *msg)
-{
-    struct spi_msg *spi_msg = (struct spi_msg *)msg;
-
-    return (spi_msg->hdr.bits & HDR_BIT_VALID);
-}
-
 static int dl_process_msg(void)
 {
     struct spi_msg *spi_msg = (struct spi_msg *)aRxBuffer;
     bool rx_valid = dl_is_msg_valid_rx(aRxBuffer);
+    bool rx_dummy = dl_is_msg_dummy(aRxBuffer);
+    enum ack rx_ack_req;
     bool tx_retry = false;
 
-    tx_retry = !ack_handler(g_spi_data.respReady, rx_valid);
+    if (rx_valid) {
+        rx_ack_req = ACK_NEEDED;
+    } else if (!rx_dummy) {
+        rx_ack_req = ACK_ERROR;
+    } else {
+        rx_ack_req = ACK_NOT_NEEDED;
+    }
+
+    tx_retry = !ack_handler(g_spi_data.respReady, rx_ack_req);
 
     if (rx_valid) {
         if ((spi_msg->hdr.bits & HDR_BIT_TYPE) == MSG_TYPE_NW) {
@@ -395,10 +467,10 @@ static int dl_process_msg(void)
         mods_muc_int_set(PIN_RESET);
         if (!tx_retry) {
             g_spi_data.respReady = false;
-            memset(aTxBuffer, 0, MAX_DMA_BUF_SIZE);
+            dl_setup_for_dummy_tx();
         }
         dl_call_sent_cb(0);
-    } else {
+    } else if (!rx_dummy) {
         dbgprint("UNEXPECTED MSG!!\r\n");
         dump();
     }
@@ -415,7 +487,7 @@ static void Error_Handler(SPI_HandleTypeDef *_hspi)
   mods_muc_int_set(PIN_RESET);
   _hspi->Instance->CR1 |= (SPI_CR1_SSM | SPI_CR1_SSI);
 
-  tx_retry = !ack_handler(g_spi_data.respReady, false);
+  tx_retry = !ack_handler(g_spi_data.respReady, ACK_ERROR);
   if (!tx_retry)
     g_spi_data.respReady = false;
   dbgprintx32("SPIERR : 0x", _hspi->ErrorCode, "\r\n");
@@ -424,7 +496,7 @@ static void Error_Handler(SPI_HandleTypeDef *_hspi)
   mod_dev_base_spi_reset();
   device_spi_mod_init(_hspi);
   if (!tx_retry)
-    memset(aTxBuffer, 0, MAX_DMA_BUF_SIZE);
+    dl_setup_for_dummy_tx();
   memset(aRxBuffer, 0, MAX_DMA_BUF_SIZE);
   g_spi_data.armDMA = true;
 }

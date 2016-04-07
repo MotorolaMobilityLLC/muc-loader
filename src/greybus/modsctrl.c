@@ -167,6 +167,20 @@ static int modsctrl_reboot(uint32_t cportid,
     return rv;
 }
 
+static inline int
+modsctrl_connected(uint32_t cportid, gb_operation_header *op_header)
+{
+    return greybus_send_response(cportid, op_header,
+            GB_OP_SUCCESS, NULL, 0, NULL);
+}
+
+static inline int
+modsctrl_disconnected(uint32_t cportid, gb_operation_header *op_header)
+{
+    return greybus_send_response(cportid, op_header,
+            GB_OP_SUCCESS, NULL, 0, NULL);
+}
+
 static int modsctrl_unimplemented(uint32_t cportid,
         gb_operation_header *op_header)
 {
@@ -236,10 +250,10 @@ int mods_control_handler(uint32_t cportid,
                 (struct gb_operation_msg *)op_header);
         break;
     case MB_CONTROL_TYPE_PORT_CONNECTED:
-        rc = modsctrl_unimplemented(cportid, op_header);
+        rc = modsctrl_connected(cportid, op_header);
         break;
     case MB_CONTROL_TYPE_PORT_DISCONNECTED:
-        rc = modsctrl_unimplemented(cportid, op_header);
+        rc = modsctrl_disconnected(cportid, op_header);
         break;
     case MB_CONTROL_TYPE_SLAVE_POWER:
         rc = modsctrl_slave_power(cportid, (struct gb_operation_msg *)op_header);

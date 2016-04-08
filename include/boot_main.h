@@ -42,6 +42,7 @@ extern int get_chip_uid(uint64_t *uid_high, uint64_t *uid_low);
 
 extern int set_flashing_flag(void);
 extern int set_request_flash(void);
+extern uint32_t get_flash_reason(void);
 
 enum BootState {
     BOOT_STATE_NORMAL,        /* Boot main program */

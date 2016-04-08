@@ -42,7 +42,7 @@
 
 /* Version of the Greybus control protocol we support */
 #define MB_CONTROL_VERSION_MAJOR              0x00
-#define MB_CONTROL_VERSION_MINOR              0x02
+#define MB_CONTROL_VERSION_MINOR              0x07
 
 /* Greybus control request types */
 #define MB_CONTROL_TYPE_INVALID               0x00
@@ -52,7 +52,12 @@
 #define MB_CONTROL_TYPE_PORT_CONNECTED        0x04
 #define MB_CONTROL_TYPE_PORT_DISCONNECTED     0x05
 #define MB_CONTROL_TYPE_SLAVE_POWER           0x06
-#define MB_CONTROL_TYPE_ROOT_VERSION          0x07
+#define MB_CONTROL_TYPE_GET_ROOT_VER          0x07
+#define MB_CONTROL_TYPE_RTC_SYNC              0x08
+#define MB_CONTROL_TYPE_SLAVE_STATE           0x09
+#define MB_CONTROL_TYPE_SET_CURRENT_LIMIT     0x0a
+#define MB_CONTROL_TYPE_CAPABLITY_CHANGED     0x0b
+#define MB_CONTROL_TYPE_GET_PWRUP_REASON      0x0c
 
 /* Valid modes for the reboot request */
 #define MB_CONTROL_REBOOT_MODE_RESET          0x01
@@ -65,8 +70,8 @@
 
 /* Control protocol version request has no payload */
 struct mb_control_proto_version_response {
-    uint8_t      major;
-    uint8_t      minor;
+    uint8_t     major;
+    uint8_t     minor;
 } __attribute__ ((packed));
 
 /* Control protocol get_ids request has no payload */
@@ -81,44 +86,71 @@ struct mb_control_get_ids_response {
     uint32_t    slave_mask;
 } __attribute__ ((packed));
 
+/* Control protocol reboot request */
 struct mb_control_reboot_request {
-    uint8_t      mode;
+    uint8_t     mode;
 } __attribute__ ((packed));
 
+/* Control protocol [dis]connected request */
 struct mb_control_connected_request {
-    uint8_t    cport_id;
+    uint8_t     cport_id;
 } __attribute__ ((packed));
+/* Control protocol [dis]connected response has no payload */
 
-struct mb_control_disconnected_request {
-    uint8_t    cport_id;
-} __attribute__ ((packed));
-
+/* Control protocol slave power request */
 struct mb_control_power_ctrl_request {
     uint32_t    slave_id;
-    uint8_t      mode;
+    uint8_t     mode;
 } __attribute__ ((packed));
 /* Control protocol slave power response has no payload */
 
+/* Control protocol get root version response */
 struct mb_control_root_ver_response {
-    uint8_t      version;
+    uint8_t     version;
 } __attribute__ ((packed));
 
-static int modsctrl_get_version(uint32_t cportid,
-                            gb_operation_header *op_header)
+/* Control protocol RTC sync request */
+struct mb_control_rtc_sync_request {
+    uint64_t    nsec;
+} __attribute__ ((packed));
+/* Control protocol RTC sync has no response */
+
+/* Control protocol current limit request */
+struct mb_control_current_limit_request {
+    uint64_t    limit;
+} __attribute__ ((packed));
+/* Control protocol current limit response has no payload */
+
+struct mb_control_get_pwrup_reason_response {
+    uint32_t    reason;
+} __attribute__ ((packed));
+
+/* conditionally respond to a message */
+static inline int
+modsctrl_null_resp(uint32_t cportid, struct gb_operation_msg *msg,  uint8_t status)
+{
+    int rv = GB_OP_SUCCESS;
+
+    if (msg->hdr.id) {
+        rv = greybus_send_response(cportid, &msg->hdr, status, NULL, 0, NULL);
+    }
+    return rv;
+}
+
+static int modsctrl_get_version(uint32_t cportid, struct gb_operation_msg *msg)
 {
     unsigned char payload[2] = {MB_CONTROL_VERSION_MAJOR,
                                 MB_CONTROL_VERSION_MINOR};
 
     return greybus_send_response(cportid,
-                               op_header,
+                               &msg->hdr,
                                GB_OP_SUCCESS,
                                payload,
                                sizeof(payload),
                                NULL);
 }
 
-static int modsctrl_get_ids(uint32_t cportid,
-                            gb_operation_header *op_header)
+static int modsctrl_get_ids(uint32_t cportid, struct gb_operation_msg *msg)
 {
     struct mb_control_get_ids_response get_ids_resp;
 
@@ -134,20 +166,19 @@ static int modsctrl_get_ids(uint32_t cportid,
 #endif
 
     return greybus_send_response(cportid,
-                               op_header,
+                               &msg->hdr,
                                GB_OP_SUCCESS,
                                (unsigned char *)&get_ids_resp,
                                sizeof(get_ids_resp),
                                NULL);
 }
 
-static int modsctrl_reboot(uint32_t cportid,
-        struct gb_operation_msg *msg)
+static int modsctrl_reboot(uint32_t cportid, struct gb_operation_msg *msg)
 {
     int rv = GB_OP_SUCCESS;
 
     struct mb_control_reboot_request *req =
-        (struct mb_control_reboot_request *)msg->data;
+            (struct mb_control_reboot_request *)msg->data;
 
     switch (req->mode) {
         case MB_CONTROL_REBOOT_MODE_RESET:
@@ -168,51 +199,18 @@ static int modsctrl_reboot(uint32_t cportid,
 }
 
 static inline int
-modsctrl_connected(uint32_t cportid, gb_operation_header *op_header)
+modsctrl_connected(uint32_t cportid, struct gb_operation_msg *msg)
 {
-    return greybus_send_response(cportid, op_header,
-            GB_OP_SUCCESS, NULL, 0, NULL);
+    return modsctrl_null_resp(cportid, msg,  GB_OP_SUCCESS);
 }
 
 static inline int
-modsctrl_disconnected(uint32_t cportid, gb_operation_header *op_header)
+modsctrl_disconnected(uint32_t cportid, struct gb_operation_msg *msg)
 {
-    return greybus_send_response(cportid, op_header,
-            GB_OP_SUCCESS, NULL, 0, NULL);
+    return modsctrl_null_resp(cportid, msg,  GB_OP_SUCCESS);
 }
 
-static int modsctrl_unimplemented(uint32_t cportid,
-        gb_operation_header *op_header)
-{
-    int rv = GB_OP_SUCCESS;
-
-    if (op_header->id) {
-        rv = greybus_send_response(cportid,
-            op_header,
-            GB_OP_INVALID,
-            NULL,
-            0,
-            NULL);
-    }
-
-    return rv;
-}
-
-static int modsctrl_root_version(uint32_t cportid,
-        gb_operation_header *op_header)
-{
-    struct mb_control_root_ver_response resp = { CONFIG_ROOT_VERSION };
-
-    return greybus_send_response(cportid,
-            op_header,
-            GB_OP_SUCCESS,
-            (unsigned char *)&resp,
-            sizeof(resp),
-            NULL);
-}
-
-static int modsctrl_slave_power(uint32_t cportid,
-        struct gb_operation_msg *msg)
+static int modsctrl_slave_power(uint32_t cportid, struct gb_operation_msg *msg)
 {
     int ret = 0;
 #ifdef MOD_SLAVE_APBE
@@ -221,48 +219,94 @@ static int modsctrl_slave_power(uint32_t cportid,
 
     ret = slave_pwrctrl_set_mode(req->mode);
 #else
-    ret = modsctrl_unimplemented(cportid, (gb_operation_header *)msg);
+    ret = modsctrl_null_resp(cportid, msg, GB_OP_INVALID);
 #endif
     return ret ? GB_OP_UNKNOWN_ERROR : GB_OP_SUCCESS;
 }
 
-int mods_control_handler(uint32_t cportid,
-                          void *data,
-                          size_t len)
+static int modsctrl_root_version(uint32_t cportid, struct gb_operation_msg *msg)
+{
+    struct mb_control_root_ver_response resp = { CONFIG_ROOT_VERSION };
+
+    return greybus_send_response(cportid,
+            &msg->hdr,
+            GB_OP_SUCCESS,
+            (unsigned char *)&resp,
+            sizeof(resp),
+            NULL);
+}
+
+static inline int
+modsctrl_rtc_sync(uint32_t cportid, struct gb_operation_msg *msg)
+{
+    return modsctrl_null_resp(cportid, msg,  GB_OP_SUCCESS);
+}
+
+static inline int
+modsctrl_set_current_limit(uint32_t cportid, struct gb_operation_msg *msg)
+{
+    return modsctrl_null_resp(cportid, msg,  GB_OP_SUCCESS);
+}
+
+static inline int
+modsctrl_get_pwrup_reason(uint32_t cportid, struct gb_operation_msg *msg)
+{
+    struct mb_control_get_pwrup_reason_response resp;
+
+    resp.reason = get_flash_reason();
+
+    return greybus_send_response(cportid,
+            &msg->hdr,
+            GB_OP_SUCCESS,
+            (unsigned char *)&resp,
+            sizeof(resp),
+            NULL);
+}
+
+int mods_control_handler(uint32_t cportid, void *data, size_t len)
 {
     int rc = 0;
+    struct gb_operation_msg *msg;
+
     if (len < sizeof(gb_operation_header)) {
         dbgprint("mods_control_handler: RX data length error\r\n");
         return -1;
     }
 
-    gb_operation_header *op_header = (gb_operation_header *)data;
-
-    switch (op_header->type) {
+    msg = (struct gb_operation_msg *)data;
+    switch (msg->hdr.type) {
     case MB_CONTROL_TYPE_PROTOCOL_VERSION:
-        rc = modsctrl_get_version(cportid, op_header);
+        rc = modsctrl_get_version(cportid, msg);
         break;
     case MB_CONTROL_TYPE_GET_IDS:
-        rc = modsctrl_get_ids(cportid, op_header);
+        rc = modsctrl_get_ids(cportid, msg);
         break;
     case MB_CONTROL_TYPE_REBOOT:
-        rc = modsctrl_reboot(cportid,
-                (struct gb_operation_msg *)op_header);
+        rc = modsctrl_reboot(cportid, msg);
         break;
     case MB_CONTROL_TYPE_PORT_CONNECTED:
-        rc = modsctrl_connected(cportid, op_header);
+        rc = modsctrl_connected(cportid, msg);
         break;
     case MB_CONTROL_TYPE_PORT_DISCONNECTED:
-        rc = modsctrl_disconnected(cportid, op_header);
+        rc = modsctrl_disconnected(cportid, msg);
         break;
     case MB_CONTROL_TYPE_SLAVE_POWER:
-        rc = modsctrl_slave_power(cportid, (struct gb_operation_msg *)op_header);
+        rc = modsctrl_slave_power(cportid, msg);
         break;
-    case MB_CONTROL_TYPE_ROOT_VERSION:
-        rc = modsctrl_root_version(cportid, op_header);
+    case MB_CONTROL_TYPE_GET_ROOT_VER:
+        rc = modsctrl_root_version(cportid, msg);
+        break;
+    case MB_CONTROL_TYPE_RTC_SYNC:
+        return modsctrl_rtc_sync(cportid, msg);
+        break;
+    case MB_CONTROL_TYPE_SET_CURRENT_LIMIT:
+        return modsctrl_set_current_limit(cportid, msg);
+        break;
+    case MB_CONTROL_TYPE_GET_PWRUP_REASON:
+        return modsctrl_get_pwrup_reason(cportid, msg);
         break;
     default:
-        rc = modsctrl_unimplemented(cportid, op_header);
+        rc = modsctrl_null_resp(cportid, msg, GB_OP_INVALID);
         break;
     }
 

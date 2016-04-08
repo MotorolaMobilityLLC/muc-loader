@@ -52,7 +52,6 @@ typedef void (*Function_Pointer)(void);
 
 /* Private define ------------------------------------------------------------*/
 #define BOOT_PARTITION_INDEX	0
-#define FLASH_LOADER_INDEX	2
 #define JUMP_ADDRESS_OFFSET	4
 #define MMAP_PARTITION_NUM	4
 
@@ -68,12 +67,19 @@ static const char bootmode_flag[8] =  {'B', 'O', 'O', 'T', 'M', 'O', 'D', 'E'};
 static const char flashing_flag[8] =  {'F', 'L', 'A', 'S', 'H', 'I', 'N', 'G'};
 
 /* debug variable for why we went into flash */
-#define FLASH_REASON_BOOTMODE 1
-#define FLASH_REASON_FLASHING 2
-#define FLASH_REASON_FLASHPIN 3
-#define FLASH_REASON_BOOTFAIL 4
+#define FLASH_REASON_BOOTMODE         1
+#define FLASH_REASON_FLASHING         2
+#define FLASH_REASON_FLASHPIN         3
+#define FLASH_REASON_INVALID_HDR      4
+#define FLASH_REASON_INVALID_SIGN     5
+#define FLASH_REASON_INVALID_ADDR     6
 
 static uint32_t flash_reason;
+
+uint32_t get_flash_reason(void)
+{
+    return flash_reason;
+}
 
 static const struct memory_map mmap[MMAP_PARTITION_NUM] = {
   {"nuttx", ((uint32_t)0x08008000), ((uint32_t)0x0807f800)},
@@ -82,7 +88,7 @@ static const struct memory_map mmap[MMAP_PARTITION_NUM] = {
   {0, 0, 0},
 };
 
-static void Boot2Partition(int pIndex)
+static uint32_t Boot2Partition(int pIndex)
 {
   Function_Pointer  pJumpToFunction;
   uint32_t jumpAddress;
@@ -95,14 +101,14 @@ static void Boot2Partition(int pIndex)
 
   if(mmap[pIndex].pname == NULL)
   {
-    return;
+    return FLASH_REASON_INVALID_ADDR;
   }
 
   imageAddress = mmap[pIndex].partition_start_address;
 
   if(imageAddress == 0)
   {
-    return;
+    return FLASH_REASON_INVALID_ADDR;
   }
 
   jumpAddress = *(__IO uint32_t*)(imageAddress + JUMP_ADDRESS_OFFSET);
@@ -114,13 +120,13 @@ static void Boot2Partition(int pIndex)
     if(!valid_tftf_header(tf_header))
     {
       dbgprint("valid_tftf_header failed\r\n");
-      return;
+      return FLASH_REASON_INVALID_HDR;
     }
 
     if(validate_image_signature(tf_header, &sIndex))
     {
       dbgprint("validate_image_signature failed\r\n");
-      return;
+      return FLASH_REASON_INVALID_SIGN;
     }
 #endif
     /* Return Clock Configuration to Default before booting */
@@ -136,6 +142,7 @@ static void Boot2Partition(int pIndex)
     pJumpToFunction = (Function_Pointer)jumpAddress;
     pJumpToFunction();
   }
+  return FLASH_REASON_INVALID_ADDR;
 }
 
 enum BootState CheckFlashMode(void)
@@ -195,8 +202,7 @@ int main(void)
   switch(bootState) {
   case BOOT_STATE_NORMAL:
     MX_USART_UART_Init();
-    Boot2Partition(BOOT_PARTITION_INDEX);
-    flash_reason = FLASH_REASON_BOOTFAIL;
+    flash_reason = Boot2Partition(BOOT_PARTITION_INDEX);
   case BOOT_STATE_REQUEST_FLASH:
     /* Erase the Flash Mode Barker */
     ErasePage((uint32_t)(FLASHMODE_FLAG_PAGE));
@@ -206,16 +212,6 @@ int main(void)
   default:
     break;
   }
-
-#ifdef CONFIG_NO_FLASH
-  /* fallback to booting to flash loader */
-  dbgprint("\r\nFLASHING\r\n");
-  Boot2Partition(FLASH_LOADER_INDEX);
-#endif
-
-  /* USER CODE END 1 */
-
-  /* MCU Configuration----------------------------------------------------------*/
 
   /* Reset of all peripherals, Initializes the Flash interface and the Systick. */
   HAL_Init();

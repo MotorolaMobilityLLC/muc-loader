@@ -69,7 +69,7 @@ int network_recv(const void *msg, size_t len)
     case CONTROL_CPORT:
       rc = control_cport_handler(m_msg->hdr.cport, m_msg->payload,
                     len - sizeof(struct mods_nw_hdr));
-      if (rc == GB_FW_ERR_INVALID) {
+      if (rc != GB_OP_SUCCESS) {
         dbgprint("mods_control_handler failed\r\n");
         goto protocol_error;
       }
@@ -77,7 +77,7 @@ int network_recv(const void *msg, size_t len)
     case FIRMWARE_CPORT:
       rc = fw_cport_handler(m_msg->hdr.cport, m_msg->payload,
                     len - sizeof(struct mods_nw_hdr));
-      if (rc) {
+      if (rc == GB_FW_ERR_INVALID) {
         dbgprint("fw_cport_handler failed\r\n");
         goto protocol_error;
       }
@@ -85,7 +85,7 @@ int network_recv(const void *msg, size_t len)
     case MODS_CONTROL_CPORT:
       rc = mods_control_handler(m_msg->hdr.cport, m_msg->payload,
                     len - sizeof(struct mods_nw_hdr));
-      if (rc == GB_FW_ERR_INVALID) {
+      if (rc != GB_OP_SUCCESS) {
         dbgprint("mods_control_handler failed\r\n");
         goto protocol_error;
       }

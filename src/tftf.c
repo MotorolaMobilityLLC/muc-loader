@@ -237,19 +237,18 @@ bool valid_tftf_header(const tftf_header * header) {
 
 uint8_t get_section_index(uint8_t section_type, tftf_section_descriptor *section)
 {
-    uint16_t index_count = 0;
-    while(section->section_type != section_type) {
-        if (section->section_type == TFTF_SECTION_END) {
-            if ( index_count == 0) {
-                return TFTF_SECTION_END;
-            } else {
-                break;
-            }
+    uint16_t ndx = 0;
+
+    for (ndx = 0; ndx < TFTF_MAX_SECTIONS; ndx++) {
+        if (section->section_type == section_type) {
+            return ndx;
         }
-        index_count++;
+        if (section->section_type == TFTF_SECTION_END) {
+            return TFTF_SECTION_END;
+        }
         section++;
     }
-    return index_count;
+    return TFTF_SECTION_END;
 }
 
 int validate_image_signature(const tftf_header *tf_header, uint16_t *secureIndex)

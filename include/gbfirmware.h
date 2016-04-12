@@ -81,6 +81,4 @@ struct __attribute__ ((__packed__)) gbfw_ready_to_boot_request {
   uint8_t status;
 };
 
-extern int fw_cport_handler(uint32_t cportid, void *data, size_t len);
-
 #endif

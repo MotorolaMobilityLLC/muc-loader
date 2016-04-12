@@ -121,6 +121,8 @@ int mods_control_handler(uint32_t cportid,
                           void *data,
                           size_t len);
 
+int fw_cport_handler(uint32_t cportid, void *data, size_t len);
+
 int greybus_send_response(uint32_t cport,
                         gb_operation_header *op_header,
                         uint8_t status,

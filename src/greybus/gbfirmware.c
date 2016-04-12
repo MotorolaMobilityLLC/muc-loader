@@ -46,7 +46,7 @@
 #define GB_FIRMWARE_VERSION_MAJOR   0x00
 #define GB_FIRMWARE_VERSION_MINOR   0x01
 
-#define CPORT_POLLING_TIMEOUT       512
+#define CPORT_POLLING_TIMEOUT        512
 
 #define MUCLOADER_BASE_ADDR     FLASH_BASE
 
@@ -72,7 +72,7 @@ static int gbfw_get_version(uint32_t cportid, gb_operation_header *header)
     uint8_t payload[2] = {GB_FIRMWARE_VERSION_MAJOR, GB_FIRMWARE_VERSION_MINOR};
 
     return greybus_send_response(cportid, header, GB_OP_SUCCESS, payload,
-                               sizeof(payload), NULL);
+                                 sizeof(payload), NULL);
 }
 
 static void gbfw_ap_ready_cb(int status, void *cntx)
@@ -87,8 +87,8 @@ static int gbfw_ap_ready(uint32_t cportid, gb_operation_header *header)
 }
 
 static struct gbfw_firmware_size_response firmware_size_response;
-static int gbfw_firmware_size_response(gb_operation_header *head, void *data,
-                                       uint32_t len);
+static int gbfw_firmware_size_response(gb_operation_header *head,
+                                       void *data, uint32_t len);
 
 static int gbfw_firmware_size(uint8_t stage)
 {
@@ -213,8 +213,8 @@ static int gbfw_get_firmware_response(gb_operation_header *header, void *data,
     tftf_header *tf_header = (tftf_header *)data;
     data_ptr = (uint8_t *)data;
 
-    if(tftf_header_received == false) {
-        if(!valid_tftf_header(tf_header)) {
+    if (tftf_header_received == false) {
+        if (!valid_tftf_header(tf_header)) {
             dbgprint("INVALID_TFTF");
             return GB_FW_ERR_INVALID;
         }
@@ -224,7 +224,7 @@ static int gbfw_get_firmware_response(gb_operation_header *header, void *data,
 
         /* flash the raw code and any attached sections*/
         section_index = get_section_index(TFTF_SECTION_RAW_CODE, &tf_header->sections[0]);
-        if(section_index == TFTF_SECTION_END) {
+        if (section_index == TFTF_SECTION_END) {
             dbgprint("No sections to flash");
             return GB_FW_ERR_INVALID;
         }
@@ -244,8 +244,8 @@ static int gbfw_get_firmware_response(gb_operation_header *header, void *data,
               * image size.
               */
              fw_flash_data.fw_offset = TFTF_HEADER_SIZE;
-             fw_flash_data.fw_remaining_size -= ((firmware_size_response.size - TFTF_HEADER_SIZE)
-                                        - spi_write_calc_total_len(data));
+             fw_flash_data.fw_remaining_size -= ((firmware_size_response.size - TFTF_HEADER_SIZE) -
+                                                 spi_write_calc_total_len(data));
              spi_write_to_flash_header(&spi_write_ops, data);
         } else
 #endif
@@ -266,7 +266,7 @@ static int gbfw_get_firmware_response(gb_operation_header *header, void *data,
 #endif
 
             program_flash_data(flash_addr, flash_data_size, data_ptr);
-         }
+        }
 
         fw_flash_data.fw_offset += (fw_flash_data.fw_request_size - TFTF_HEADER_SIZE);
         fw_flash_data.fw_remaining_size -= (fw_flash_data.fw_request_size - TFTF_HEADER_SIZE);
@@ -288,7 +288,7 @@ static int gbfw_get_firmware_response(gb_operation_header *header, void *data,
 #ifdef CONFIG_APBE_FLASH
         if (gbfw_is_apbe_flash_stage()) {
              spi_write_to_flash_data(&spi_write_ops, data,
-                     fw_flash_data.new_payload_size);
+                                     fw_flash_data.new_payload_size);
              flash_data_size = fw_flash_data.new_payload_size;
         } else
 #endif
@@ -321,8 +321,8 @@ static int gbfw_get_firmware_response(gb_operation_header *header, void *data,
 #endif
     }
 
-    if(fw_flash_data.fw_remaining_size > 0) {
-        if(fw_flash_data.fw_remaining_size < fw_flash_data.fw_request_size) {
+    if (fw_flash_data.fw_remaining_size > 0) {
+        if (fw_flash_data.fw_remaining_size < fw_flash_data.fw_request_size) {
             fw_flash_data.new_payload_size = fw_flash_data.fw_remaining_size;
         } else {
             fw_flash_data.new_payload_size = fw_flash_data.fw_request_size;
@@ -360,8 +360,8 @@ static int gbfw_ready_to_boot(uint8_t status)
     uint16_t msg_id = greybus_get_next_id();
 
     section_index = get_section_index(TFTF_SECTION_RAW_CODE, &tf_header->sections[0]);
-    if((tf_header->sections[section_index].section_load_address != MUCLOADER_BASE_ADDR)) {
-            program_tftf_header(tftf_buff, sizeof(tftf_buff));
+    if ((tf_header->sections[section_index].section_load_address != MUCLOADER_BASE_ADDR)) {
+        program_tftf_header(tftf_buff, sizeof(tftf_buff));
     }
 
     /* Erase the Flash Mode Barker */
@@ -369,13 +369,13 @@ static int gbfw_ready_to_boot(uint8_t status)
 
     /* ready_to_boot currently doesn't respond so fake a response */
     rc = greybus_send_request(gbfw_cportid, msg_id, GB_FW_OP_READY_TO_BOOT,
-                              (uint8_t*)&req, sizeof(req), gbfw_ready_to_boot_cb);
+                      (uint8_t*)&req, sizeof(req), gbfw_ready_to_boot_cb);
 
     return rc;
 }
 
-static int gbfw_ready_to_boot_response(gb_operation_header *header, void *data,
-                                       uint32_t len)
+static int gbfw_ready_to_boot_response(gb_operation_header *header,
+                                       void *data, uint32_t len)
 {
     if (header->status) {
         dbgprint("gbfw_ready_to_boot_response(): got error status\r\n");
@@ -384,8 +384,8 @@ static int gbfw_ready_to_boot_response(gb_operation_header *header, void *data,
     return 0;
 }
 
-int fw_cport_handler(uint32_t cportid, void *data, size_t len) {
-
+int fw_cport_handler(uint32_t cportid, void *data, size_t len)
+{
     int rc = 0;
     uint8_t *data_ptr;
 
@@ -446,7 +446,8 @@ int fw_cport_handler(uint32_t cportid, void *data, size_t len) {
 
 int cport_connected = 0, offset = -1;
 
-int greybus_cport_connect(void) {
+int greybus_cport_connect(void)
+{
     if (cport_connected == 1) {
         /* Don't know what to do if it is already connected */
         return GB_FW_ERR_INVALID;
@@ -457,7 +458,8 @@ int greybus_cport_connect(void) {
     return 0;
 }
 
-int greybus_cport_disconnect(void) {
+int greybus_cport_disconnect(void)
+{
     if (cport_connected == 0) {
         return -EINVAL;
     }

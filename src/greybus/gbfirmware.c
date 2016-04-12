@@ -110,6 +110,7 @@ static struct fw_flash_data {
 } fw_flash_data;
 
 static uint8_t _gbfw_stage = 0x00;  /* current flashing stage */
+static uint8_t _gbfw_updated_count = 0; /* number of stages successfully flashed */
 extern uint32_t gbfw_cportid;  /* cport id on core for gbfw requests */
 
 static int gbfw_ready_to_boot(uint8_t status);
@@ -126,6 +127,7 @@ static int gbfw_get_version(uint32_t cportid, gb_operation_header *header)
 static void gbfw_ap_ready_cb(int status, void *cntx)
 {
     _gbfw_stage = GBFW_STAGE_MIN;
+    _gbfw_updated_count = 0;
     gbfw_next_stage();
 }
 
@@ -194,6 +196,9 @@ static int gbfw_firmware_size_response(gb_operation_header *head, void *data,
     size_t fw_size;
 
     if (head->status) {
+#ifdef CONFIG_DEBUG_FIRMWARE
+        dbgprint("no fw for current stage\r\n");
+#endif
         gbfw_next_stage();
         return 0;
     }
@@ -389,6 +394,7 @@ static int gbfw_get_firmware_response(gb_operation_header *header, void *data,
             spi_write_to_flash_finish(&spi_write_ops);
 #endif
         gbfw_next_stage();
+        _gbfw_updated_count++;
     }
     return 0;
 }
@@ -413,7 +419,12 @@ static int gbfw_ready_to_boot(uint8_t status)
     }
 
     /* Erase the Flash Mode Barker */
-    ErasePage((uint32_t)(FLASHMODE_FLAG_PAGE));
+    if (_gbfw_updated_count > 0) {
+#ifdef CONFIG_DEBUG_FIRMWARE
+        dbgprintx32("updated ", _gbfw_updated_count, " files\r\n");
+#endif
+        clr_flash_barker();
+    }
 
     /* ready_to_boot currently doesn't respond so fake a response */
     rc = greybus_send_request(gbfw_cportid, msg_id, GB_FW_OP_READY_TO_BOOT,

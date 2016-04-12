@@ -203,9 +203,10 @@ int main(void)
   case BOOT_STATE_NORMAL:
     MX_USART_UART_Init();
     flash_reason = Boot2Partition(BOOT_PARTITION_INDEX);
+    break;
   case BOOT_STATE_REQUEST_FLASH:
     /* Erase the Flash Mode Barker */
-    ErasePage((uint32_t)(FLASHMODE_FLAG_PAGE));
+    clr_flash_barker();
     /* fall through */
   case BOOT_STATE_FLASHING:
     /* fall through */
@@ -278,6 +279,11 @@ int set_flashing_flag(void)
   } else {
     return 0;
   }
+}
+
+void clr_flash_barker(void)
+{
+    ErasePage((uint32_t)(FLASHMODE_FLAG_PAGE));
 }
 
 int set_request_flash(void)

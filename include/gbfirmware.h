@@ -83,7 +83,4 @@ struct __attribute__ ((__packed__)) gbfw_ready_to_boot_request {
 
 extern int fw_cport_handler(uint32_t cportid, void *data, size_t len);
 
-int greybus_cport_connect(void);
-int greybus_cport_disconnect(void);
-
 #endif

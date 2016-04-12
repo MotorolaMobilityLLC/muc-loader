@@ -443,25 +443,3 @@ int fw_cport_handler(uint32_t cportid, void *data, size_t len)
 
     return rc;
 }
-
-int cport_connected = 0, offset = -1;
-
-int greybus_cport_connect(void)
-{
-    if (cport_connected == 1) {
-        /* Don't know what to do if it is already connected */
-        return GB_FW_ERR_INVALID;
-    }
-
-    offset = 0;
-    cport_connected = 1;
-    return 0;
-}
-
-int greybus_cport_disconnect(void)
-{
-    if (cport_connected == 0) {
-        return -EINVAL;
-    }
-    return 0;
-}

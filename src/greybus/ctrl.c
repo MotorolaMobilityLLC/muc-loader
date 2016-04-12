@@ -131,7 +131,6 @@ static int gbctrl_get_manifest(uint32_t cportid,
 
 static int gbctrl_connected(uint32_t cportid,
                           gb_operation_header *op_header) {
-    int rc;
     uint16_t *payload = (uint16_t *)(op_header + 1);
 
     if (op_header->size != sizeof(gb_operation_header) + sizeof(*payload)) {
@@ -144,17 +143,7 @@ static int gbctrl_connected(uint32_t cportid,
         return -1;
     }
 
-    rc = greybus_cport_connect();
     gbfw_cportid = *payload;
-    if (rc != 0) {
-        greybus_send_response(cportid,
-                            op_header,
-                            GB_OP_UNKNOWN_ERROR,
-                            NULL,
-                            0,
-                            NULL);
-        return -1;
-    }
     return greybus_send_response(cportid,
                                op_header,
                                GB_OP_SUCCESS,
@@ -165,7 +154,6 @@ static int gbctrl_connected(uint32_t cportid,
 
 static int gbctrl_disconnected(uint32_t cportid,
                              gb_operation_header *op_header) {
-    int rc;
     uint16_t *payload = (uint16_t *)(op_header + 1);
 
     if (op_header->size != sizeof(gb_operation_header) + sizeof(*payload) ||
@@ -179,16 +167,6 @@ static int gbctrl_disconnected(uint32_t cportid,
         return -1;
     }
 
-    rc = greybus_cport_disconnect();
-    if (rc != 0) {
-        greybus_send_response(cportid,
-                            op_header,
-                            GB_OP_UNKNOWN_ERROR,
-                            NULL,
-                            0,
-                            NULL);
-        return -1;
-    }
     return greybus_send_response(cportid,
                                op_header,
                                GB_OP_SUCCESS,

@@ -34,8 +34,6 @@
 
 #include "gbfirmware.h"
 
-extern int cport_connected;         /* FIXME */
-
 struct mods_nw_hdr {
     uint16_t  cport;
 } __attribute__ ((packed));
@@ -95,10 +93,7 @@ int network_recv(const void *msg, size_t len)
       break;
     }
 
-    return rc;
-
 protocol_error:
-    cport_connected = 0;
     return rc;
 }
 

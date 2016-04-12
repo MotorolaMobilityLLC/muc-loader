@@ -32,7 +32,6 @@
 #include "boot_main.h"
 #include "debug.h"
 #include "greybus.h"
-#include "gbfirmware.h"
 
 #include "stm32l4xx_hal.h"
 #include <apbe.h>

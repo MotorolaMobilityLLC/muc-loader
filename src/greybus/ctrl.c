@@ -32,7 +32,6 @@
 #include "boot_main.h"
 #include "debug.h"
 #include "greybus.h"
-#include "gbfirmware.h"
 
 uint32_t gbfw_cportid = 0;
 

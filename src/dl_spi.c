@@ -33,7 +33,6 @@
 #include "debug.h"
 #include "boot_main.h"
 #include "greybus.h"
-#include "gbfirmware.h"
 #include "stm32l4xx_hal.h"
 #include "stm32_hal_mod.h"
 #include "stm32l4xx_flash.h"
@@ -320,7 +319,7 @@ int dl_muc_handler(void *msg)
     dbgprint("dl_muc_handler\r\n");
 #endif
     if (dl_msg->mesg_id & GB_TYPE_RESPONSE) {
-        return GB_FW_ERR_FAILURE;
+        return GB_OP_PROTOCOL_BAD;
     }
 
     switch (dl_msg->mesg_id) {

@@ -34,7 +34,6 @@
 #include "debug.h"
 #include "boot_main.h"
 #include "greybus.h"
-#include "gbfirmware.h"
 #include "datalink.h"
 #include "stm32l4xx_hal.h"
 #include "tftf.h"
@@ -46,7 +45,55 @@
 #define GB_FIRMWARE_VERSION_MAJOR   0x00
 #define GB_FIRMWARE_VERSION_MINOR   0x01
 
-#define CPORT_POLLING_TIMEOUT        512
+/* Greybus FirmWare request types */
+#define GB_FW_OP_INVALID            0x00
+#define GB_FW_OP_PROTOCOL_VERSION   0x01
+#define GB_FW_OP_FIRMWARE_SIZE      0x02
+#define GB_FW_OP_GET_FIRMWARE       0x03
+#define GB_FW_OP_READY_TO_BOOT      0x04
+#define GB_FW_OP_AP_READY           0x05 /* Unidirectional request with no-payload */
+
+/* Greybus FirmWare boot statuses */
+#define GB_FW_BOOT_STATUS_INVALID   0x00
+#define GB_FW_BOOT_STATUS_INSECURE  0x01
+#define GB_FW_BOOT_STATUS_SECURE    0x02
+
+/* Greybus FirmWare boot instructions */
+#define GB_FW_BOOT_INSTR_FAILURE   0x00
+#define GB_FW_BOOT_INSTR_OK        0x01
+
+/* Greybus FirmWare error codes */
+#define GB_FW_ERR_INVALID          (-1)
+#define GB_FW_ERR_FAILURE          (-2)
+
+/* Boot stage whose firmware we request */
+#define GBFW_STAGE_MIN             0x01
+#define GBFW_STAGE_MAX             0x03
+
+#define GBFW_STAGE_BOOTLOADER      0x01
+#define GBFW_STAGE_APBE_SPI_FLASH  0x02
+#define GBFW_STAGE_MAIN            0x03
+
+/* Greybus FirmWare request and response payloads */
+struct gbfw_protocol_version_request {
+  uint8_t major, minor;
+} __attribute__ ((__packed__));
+
+struct gbfw_firmware_size_request {
+  uint8_t stage;
+} __attribute__ ((__packed__));
+
+struct gbfw_firmware_size_response {
+  size_t size;
+} __attribute__ ((__packed__));
+
+struct gbfw_get_firmware_request {
+  uint32_t offset, size;
+} __attribute__ ((__packed__));
+
+struct gbfw_ready_to_boot_request {
+  uint8_t status;
+} __attribute__ ((__packed__));
 
 #define MUCLOADER_BASE_ADDR     FLASH_BASE
 
@@ -63,6 +110,7 @@ static struct fw_flash_data {
 } fw_flash_data;
 
 static uint8_t _gbfw_stage = 0x00;  /* current flashing stage */
+extern uint32_t gbfw_cportid;  /* cport id on core for gbfw requests */
 
 static int gbfw_ready_to_boot(uint8_t status);
 static void gbfw_next_stage(void);

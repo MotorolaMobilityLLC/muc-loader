@@ -393,8 +393,8 @@ static int gbfw_get_firmware_response(gb_operation_header *header, void *data,
         if (gbfw_is_apbe_flash_stage())
             spi_write_to_flash_finish(&spi_write_ops);
 #endif
-        gbfw_next_stage();
         _gbfw_updated_count++;
+        gbfw_next_stage();
     }
     return 0;
 }

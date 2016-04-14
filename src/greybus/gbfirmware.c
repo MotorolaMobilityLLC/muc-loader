@@ -126,7 +126,7 @@ static int gbfw_get_version(uint32_t cportid, gb_operation_header *header)
 
 static void gbfw_ap_ready_cb(int status, void *cntx)
 {
-    _gbfw_stage = GBFW_STAGE_MIN;
+    _gbfw_stage = 0;
     _gbfw_updated_count = 0;
     gbfw_next_stage();
 }
@@ -170,10 +170,9 @@ static void gbfw_next_stage(void)
 #endif
     valid_stage_mask |= 1 << GBFW_STAGE_MAIN;
 
-    while (_gbfw_stage <= GBFW_STAGE_MAX) {
-        if ((1 << _gbfw_stage) & valid_stage_mask) {
-            gbfw_firmware_size(_gbfw_stage);
-            _gbfw_stage++;
+    while (_gbfw_stage < GBFW_STAGE_MAX) {
+        if ((1 << (_gbfw_stage + 1)) & valid_stage_mask) {
+            gbfw_firmware_size(++_gbfw_stage);
             return;
         }
         _gbfw_stage++;

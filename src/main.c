@@ -42,6 +42,7 @@
 #include <boot_main.h>
 #include "crypto.h"
 #include "datalink.h"
+#include "ramlog.h"
 #include "tftf.h"
 
 #include <stm32_hal_mod.h>
@@ -221,6 +222,8 @@ int main(void)
 
   dbgprint("\r\n--[MuC Loader v" CONFIG_VERSION_STRING ":" CONFIG_VERSION_BUILD "]\r\n");
   dbgprintx32("-Flash Mode (", flash_reason, ")\r\n");
+
+  ramlog_reason();
 
   while (1) {
     if (!mod_dev_is_attached()) {

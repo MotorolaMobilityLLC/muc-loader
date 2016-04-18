@@ -147,6 +147,10 @@ CSRCS      += $(CHIPSET_LC)_hal_rcc.c \
 ifeq ($(CONFIG_DEBUG),y)
 CSRCS      += debug.c
 CSRCS      += $(CHIPSET_LC)_hal_uart.c
+
+ifeq ($(CONFIG_RAMLOG),y)
+CSRCS      += ramlog.c
+endif
 endif
 
 # STARTUP_S should be defined in the product Make.defs file

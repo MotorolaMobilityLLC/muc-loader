@@ -38,6 +38,7 @@
 #include <chipapi.h>
 #include <debug.h>
 #include <greybus.h>
+#include <mod_ids.h>
 #include <version.h>
 #include <boot_main.h>
 #include "crypto.h"
@@ -241,28 +242,28 @@ int main(void)
   }
 }
 
-int get_board_id(uint32_t *vend_id, uint32_t *prod_id)
+int get_board_id(uint32_t *vid, uint32_t *pid)
 {
-  if (vend_id) {
-    *vend_id = MOD_BOARDID_VID;
+  if (vid) {
+    *vid = _ids.board_vid;
   }
 
-  if (prod_id) {
-    *prod_id = MOD_BOARDID_PID;
+  if (pid) {
+    *pid = _ids.board_pid;
   }
 
   return 0;
 }
 
-int get_chip_id(uint32_t *mfg_id, uint32_t *prod_id)
+int get_chip_id(uint32_t *mfg, uint32_t *pid)
 {
-  if (mfg_id) {
+  if (mfg) {
     /* MIPI Manufacturer ID from http://mid.mipi.org/ */
-    *mfg_id = 0x0104;
+    *mfg = _ids.chip_mfg;
   }
 
-  if (prod_id) {
-    *prod_id = HAL_GetDEVID();
+  if (pid) {
+    *pid = _ids.chip_pid;
   }
 
   return 0;

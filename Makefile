@@ -189,8 +189,7 @@ $(OUT_DIR)/%.o : %.s $(DEP_DIR) $(OUT_DIR)
 
 all:  $(OUT_DIR)/$(TARGET).bin $(OUT_DIR)/$(TARGET).hex $(OUT_DIR)/$(TARGET).lst $(OUT_DIR)/System.map
 
-.PHONY: FORCE
-
+.PHONY: FORCE tftf
 
 ifeq (${INCREMENTAL_RELEASE_NUMBER},)
   OVERRIDE_VERSION = 0.1
@@ -246,6 +245,10 @@ $(OUT_DIR)/System.map: $(OUT_DIR)/$(TARGET).elf
 	$(NM) $(OUT_DIR)/$(TARGET).elf | \
 	grep -v '\(compiled\)\|\(\$(OBJEXT)$$\)\|\( [aUw] \)\|\(\.\.ng$$\)\|\(LASH[RL]DI\)' | \
 	sort > $(OUT_DIR)/System.map
+
+tftf: $(OUT_DIR)/$(TARGET).elf
+	bash ./tools/tftf.sh $(OUT_DIR)/$(TARGET).elf
+
 
 clean:
 	@echo "RMDIR:   dep"          ; rm -fr dep

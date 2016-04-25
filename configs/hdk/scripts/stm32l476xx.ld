@@ -51,7 +51,7 @@ SECTIONS {
     .reset : {
         _sr_isrv = .;
         KEEP(*(.isr_vector))
-        . = ALIGN(4);
+        . = ALIGN(8);
     } > sram AT > flash
 
     /*
@@ -82,13 +82,14 @@ SECTIONS {
 
         KEEP (*(.init))
         KEEP (*(.fini))
-        . = ALIGN(4);
+        KEEP(*(.id_section))
+        . = ALIGN(8);
     } > sram AT > flash
 
     . = ALIGN(4);
     .ARM.extab : {
         *(.ARM.extab*)
-        . = ALIGN(4);
+        . = ALIGN(8);
     } > sram AT > flash
 
     . = ALIGN(4);
@@ -96,7 +97,8 @@ SECTIONS {
         __exidx_start = ABSOLUTE(.);
         *(.ARM.exidx*)
         __exidx_end = ABSOLUTE(.);
-        . = ALIGN(4);
+	    __read_only_end = ABSOLUTE(.);
+        . = ALIGN(8);
     } > sram AT > flash
 
     /*
@@ -109,7 +111,7 @@ SECTIONS {
         *(.data .data.*)
         *(.gnu.linkonce.d.*)
         _edata = ABSOLUTE(.);
-        . = ALIGN(4);
+        . = ALIGN(8);
     } > sram AT > flash
 
     /*

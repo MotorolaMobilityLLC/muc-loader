@@ -54,6 +54,7 @@ AR         = $(PREFIX)-ar
 OBJCOPY    = $(PREFIX)-objcopy
 OBJDUMP    = $(PREFIX)-objdump
 SIZE       = $(PREFIX)-size
+NM         = $(PREFIX)-nm
 
 # Defines
 DEFS       = -D$(TARGET_DEVICE)
@@ -169,7 +170,6 @@ TARGET       = boot_$(CONFIG_MOD_TYPE)
 
 # Linker flags
 LDFLAGS    = -Wl,--gc-sections -g
-LDFLAGS   += -Wl,-Map=$(OUT_DIR)/$(TARGET).map
 LDFLAGS   += $(LIBS) -T$(CFG_DIR)/$(CONFIG_MOD_TYPE)/scripts/$(LDSCRIPT)
 
 # Enable Semihosting
@@ -186,7 +186,7 @@ $(OUT_DIR)/%.o : %.s $(DEP_DIR) $(OUT_DIR)
 	@echo "CC:      $(notdir $<)"
 	$(CC) $(CFLAGS) -c -o $@ $< -MMD -MF $(DEP_DIR)/$(*F).d
 
-all:  $(OUT_DIR)/$(TARGET).bin $(OUT_DIR)/$(TARGET).hex $(OUT_DIR)/$(TARGET).lst
+all:  $(OUT_DIR)/$(TARGET).bin $(OUT_DIR)/$(TARGET).hex $(OUT_DIR)/$(TARGET).lst $(OUT_DIR)/System.map
 
 .PHONY: FORCE
 
@@ -240,6 +240,11 @@ $(OUT_DIR)/$(TARGET).elf: $(OBJS)
 	$(CC) $(CFLAGS) $(LDFLAGS) $(OBJS) -o $@
 	@echo "SIZE:    $(TARGET).elf"
 	$(SIZE) $@
+
+$(OUT_DIR)/System.map: $(OUT_DIR)/$(TARGET).elf
+	$(NM) $(OUT_DIR)/$(TARGET).elf | \
+	grep -v '\(compiled\)\|\(\$(OBJEXT)$$\)\|\( [aUw] \)\|\(\.\.ng$$\)\|\(LASH[RL]DI\)' | \
+	sort > $(OUT_DIR)/System.map
 
 clean:
 	@echo "RMDIR:   dep"          ; rm -fr dep

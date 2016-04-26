@@ -35,7 +35,7 @@ printf -v VERSION  '%08x' $(($(($(grep CONFIG_VERSION_MAJOR .version | cut -f2 -
 
 function tftf_muc()
 {
-    TFTF_FILENAME="upd-${CONFIG_ARCH_UNIPRO_MFG}-${CONFIG_ARCH_UNIPRO_PID}-${CONFIG_ARCH_BOARDID_VID}-${CONFIG_ARCH_BOARDID_PID}-02.tftf"
+    TFTF_FILENAME="upd-${CONFIG_ARCH_UNIPRO_MFG}-${CONFIG_ARCH_UNIPRO_PID}-${CONFIG_ARCH_BOARDID_VID}-${CONFIG_ARCH_BOARDID_PID}-01.tftf"
     start_address="$(grep ' _Start$' out/System.map  | cut -d\  -f1)"
 
     create-tftf -v --elf ${ELF} \

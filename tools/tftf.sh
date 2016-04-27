@@ -27,7 +27,7 @@
 source .version
 source .config
 
-ELF=$1
+BIN=$1
 
 MAJOR=$(grep CONFIG_VERSION_MAJOR .version | cut -f2 -d"=" )
 MINOR=$(grep CONFIG_VERSION_MINOR .version | cut -f2 -d"=" )
@@ -35,12 +35,19 @@ printf -v VERSION  '%08x' $(($(($(grep CONFIG_VERSION_MAJOR .version | cut -f2 -
 
 function tftf_muc()
 {
-    TFTF_FILENAME="upd-${CONFIG_ARCH_UNIPRO_MFG}-${CONFIG_ARCH_UNIPRO_PID}-${CONFIG_ARCH_BOARDID_VID}-${CONFIG_ARCH_BOARDID_PID}-01.tftf"
+    CHP_MFG=${CONFIG_ARCH_UNIPRO_MFG##0x}
+    CHP_PID=${CONFIG_ARCH_UNIPRO_PID##0x}
+    BRD_VID=${CONFIG_ARCH_BOARDID_VID##0x}
+    BRD_PID=${CONFIG_ARCH_BOARDID_PID##0x}
+    TFTF_FILENAME="upd-${CHP_MFG}-${CHP_PID}-${BRD_VID}-${BRD_PID}-01.tftf"
     start_address="$(grep ' _Start$' out/System.map  | cut -d\  -f1)"
+    load_address="$(grep g_flashVectors out/System.map| cut -d\  -f1)"
 
-    create-tftf -v --elf ${ELF} \
+    create-tftf -v \
+          --code ${BIN} \
           --out out/${TFTF_FILENAME} \
           --start "0x${start_address}" \
+          --load  "0x${load_address} " \
           --unipro-mfg ${CONFIG_ARCH_UNIPRO_MFG} \
           --unipro-pid ${CONFIG_ARCH_UNIPRO_PID} \
           --ara-vid ${CONFIG_ARCH_BOARDID_VID}\
@@ -49,4 +56,4 @@ function tftf_muc()
           --ara-reserved-tftf 0x${VERSION}
 }
 
-tftf_muc ${ELF}
+tftf_muc ${BIN}

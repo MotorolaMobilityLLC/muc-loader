@@ -273,9 +273,8 @@ $(OUT_DIR)/System.map: $(OUT_DIR)/$(TARGET).elf
 	grep -v '\(compiled\)\|\(\$(OBJEXT)$$\)\|\( [aUw] \)\|\(\.\.ng$$\)\|\(LASH[RL]DI\)' | \
 	sort > $(OUT_DIR)/System.map
 
-tftf: $(OUT_DIR)/$(TARGET).elf
-	bash ./tools/tftf.sh $(OUT_DIR)/$(TARGET).elf
-
+tftf: $(OUT_DIR)/$(TARGET).bin  $(OUT_DIR)/System.map
+	bash ./tools/tftf.sh $(OUT_DIR)/$(TARGET).bin
 
 clean:
 	@echo "RMDIR:   dep"          ; rm -fr dep

@@ -120,6 +120,7 @@ CSRCS      += \
 	      crypto.c \
 	      public_keys.c \
 	      mod_ids.c \
+	      mnfb.c \
 	      $(CHIPSET_LC)_muc.c \
 	      $(CHIPSET_LC)_mod_device.c \
 	      $(CHIPSET_LC)_hal_mod.c

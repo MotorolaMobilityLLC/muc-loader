@@ -207,6 +207,33 @@ endif
 .version: FORCE
 	./tools/version.sh -v $(OVERRIDE_VERSION) -b $(OVERRIDE_BUILD_NUM) $@
 
+$(OUT_DIR)/mnfb.o : $(OUT_DIR)/manifest.inc
+
+ifdef EXT_MANIFEST_INC
+  ifneq ("$(wildcard $(EXT_MANIFEST_INC))","")
+   $(info "using externally signed manifest " $(EXT_MANIFEST_INC))
+   USE_EXT_MANIFEST_INC = y
+  else
+   $(error "EXT_MANIFEST_INC path invalid " $(EXT_MANIFEST_INC))
+  endif
+else
+  USE_EXT_MANIFEST_INC = n
+endif
+
+ifeq ($(USE_EXT_MANIFEST_INC), y)
+$(OUT_DIR)/manifest.inc: $(EXT_MANIFEST_INC)
+	cp $(EXT_MANIFEST_INC) $@
+else
+$(OUT_DIR)/manifest.inc: $(OUT_DIR)/firmware.mnfb
+	xxd -i < $< > $@
+	echo "," >> $@
+	openssl dgst -sha256 -sign manifests/testkey_priv.key $< | xxd -i >> $@
+endif
+
+$(OUT_DIR)/firmware.mnfb: manifests/firmware.mnfs
+	cp $< $(OUT_DIR)
+	cd out; manifesto firmware.mnfs $(CONFIG_ARCH_BOARDID_VID) $(CONFIG_ARCH_BOARDID_PID)
+
 $(OUT_DIR)/include/version.h: .version $(OUT_DIR) $(OUT_DIR)/include
 	@echo "#ifndef __VERSION_H__"       > $@
 	@echo "#define __VERSION_H__"      >> $@
@@ -235,8 +262,7 @@ $(OUT_DIR)/$(TARGET).lst: $(OUT_DIR)/$(TARGET).elf
 	@echo "OBJDUMP: $(@)"
 	$(OBJDUMP) -St $^ > $@
 
-#	$(CC) $(CFLAGS) $(LDFLAGS) $(SRC_DIR)/startup_$(TARGET_DEVICE_LC).s $(OBJS) -o $@
-$(OUT_DIR)/$(TARGET).elf: $(OBJS)
+$(OUT_DIR)/$(TARGET).elf: $(OBJS) $(OUT_DIR)/manifest.inc
 	@echo "LD:      $(TARGET).elf"
 	$(CC) $(CFLAGS) $(LDFLAGS) $(OBJS) -o $@
 	@echo "SIZE:    $(TARGET).elf"

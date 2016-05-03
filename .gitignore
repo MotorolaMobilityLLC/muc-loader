@@ -16,3 +16,4 @@ include/version.h
 cscope.out
 .config
 /Make.defs
+*.mnfb

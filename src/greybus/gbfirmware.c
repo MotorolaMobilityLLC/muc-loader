@@ -388,10 +388,20 @@ static int gbfw_get_firmware_response(gb_operation_header *header, void *data,
         gbfw_get_firmware(fw_flash_data.fw_offset + TFTF_HEADER_SIZE,
                           fw_flash_data.new_payload_size);
     } else {
+        /* No more data to write */
+
 #ifdef CONFIG_APBE_FLASH
         if (gbfw_is_apbe_flash_stage())
             spi_write_to_flash_finish(&spi_write_ops);
 #endif
+
+        /* now that we are done flashing, if this is the main stage,
+         * then we want to update the tf header section */
+        if (_gbfw_stage == GBFW_STAGE_MAIN) {
+            if (valid_tftf_header(tf_header)) {
+                program_tftf_header(tftf_buff, sizeof(tftf_buff));
+            }
+        }
         _gbfw_updated_count++;
         gbfw_next_stage();
     }
@@ -409,13 +419,7 @@ static int gbfw_ready_to_boot(uint8_t status)
 {
     int rc;
     struct gbfw_ready_to_boot_request req = {status};
-    tftf_header *tf_header = (tftf_header *)tftf_buff;
     uint16_t msg_id = greybus_get_next_id();
-
-    section_index = get_section_index(TFTF_SECTION_RAW_CODE, &tf_header->sections[0]);
-    if ((tf_header->sections[section_index].section_load_address != MUCLOADER_BASE_ADDR)) {
-        program_tftf_header(tftf_buff, sizeof(tftf_buff));
-    }
 
     /* Erase the Flash Mode Barker */
     if (_gbfw_updated_count > 0) {

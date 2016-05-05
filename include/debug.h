@@ -34,22 +34,22 @@
 #ifdef _DEBUG
     void dbginit(void);
     void dbgputc(int x);
-    void dbgprint(char *str);
+    void dbgprint(const char *str);
     void dbgprinthex8(uint8_t num);
     void dbgprinthex32(uint32_t num);
     void dbgprinthex64(uint64_t num);
-    void dbgprintx32(char * s1, uint32_t num, char * s2);
-    void dbgprintx64(char * s1, uint64_t num, char * s2);
+    void dbgprintx32(const char * s1, uint32_t num, const char * s2);
+    void dbgprintx64(const char * s1, uint64_t num, const char * s2);
     #define dbgflush() chip_dbgflush()
 #else
     static inline void dbginit(void) { }
     static inline void dbgputc(int x) { }
-    static inline void dbgprint(char *str) { }
+    static inline void dbgprint(const char *str) { }
     static inline void dbgprinthex8(uint8_t num) { }
     static inline void dbgprinthex32(uint32_t num) { }
     static inline void dbgprinthex64(uint64_t num) { }
-    static inline void dbgprintx32(char * s1, uint32_t num, char * s2) { }
-    static inline void dbgprintx64(char * s1, uint64_t num, char * s2) { }
+    static inline void dbgprintx32(const char * s1, uint32_t num, const char * s2) { }
+    static inline void dbgprintx64(const char * s1, uint64_t num, const char * s2) { }
     static inline void dbgflush(void) { }
 #endif /* _DEBUG */
 

@@ -67,7 +67,7 @@ void __attribute__((optimize("O1"))) dbgputc(int x) {
  *
  * @returns Nothing
  */
-void dbgprint(char *str) {
+void dbgprint(const char *str) {
     if (str != NULL) {
         while (*str != 0) {
             dbgputc(*str);
@@ -140,7 +140,7 @@ void dbgprinthex64(uint64_t num) {
  *
  * @returns Nothing
  */
-void dbgprintx32(char * s1, uint32_t num, char * s2) {
+void dbgprintx32(const char * s1, uint32_t num, const char * s2) {
     dbgprint(s1);
     dbgprinthex32(num);
     dbgprint(s2);
@@ -155,7 +155,7 @@ void dbgprintx32(char * s1, uint32_t num, char * s2) {
  *
  * @returns Nothing
  */
-void dbgprintx64(char * s1, uint64_t num, char * s2) {
+void dbgprintx64(const char * s1, uint64_t num, const char * s2) {
     dbgprint(s1);
     dbgprinthex64(num);
     dbgprint(s2);

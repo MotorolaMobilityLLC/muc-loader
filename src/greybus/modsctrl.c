@@ -85,6 +85,7 @@ struct mb_control_get_ids_response {
     uint32_t    fw_version;
     uint32_t    slave_mask;
     char        fw_version_str[MB_CONTROL_FW_VER_STR_SZ];
+    uint8_t     fw_vendor_updates;
 } __attribute__ ((packed));
 
 /* Control protocol reboot request */
@@ -180,6 +181,12 @@ static int modsctrl_get_ids(uint32_t cportid, struct gb_operation_msg *msg)
 #endif
 
     cpstr(get_ids_resp.fw_version_str, CONFIG_VERSION_STRING " " CONFIG_VERSION_BUILD);
+
+#ifdef CONFIG_GREYBUS_MODS_SUPPORT_VENDOR_UPDATES
+    get_ids_resp.fw_vendor_updates = true;
+#else
+    get_ids_resp.fw_vendor_updates = false;
+#endif
 
     return greybus_send_response(cportid,
                                &msg->hdr,

@@ -199,7 +199,7 @@ else
 endif
 
 ifeq (${INCREMENTAL_BUILD_NUMBER},)
-  OVERRIDE_BUILD_NUM = 5
+  OVERRIDE_BUILD_NUM = ${shell git describe --always --dirty --match nothing 2>/dev/null}
 else
   OVERRIDE_BUILD_NUM = ${INCREMENTAL_BUILD_NUMBER}
 endif

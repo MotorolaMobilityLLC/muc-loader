@@ -74,6 +74,7 @@ struct mb_control_proto_version_response {
 } __attribute__ ((packed));
 
 /* Control protocol get_ids request has no payload */
+#define MB_CONTROL_FW_VER_STR_SZ              32
 struct mb_control_get_ids_response {
     uint32_t    unipro_mfg_id;
     uint32_t    unipro_prod_id;
@@ -83,6 +84,7 @@ struct mb_control_get_ids_response {
     uint64_t    uid_high;
     uint32_t    fw_version;
     uint32_t    slave_mask;
+    char        fw_version_str[MB_CONTROL_FW_VER_STR_SZ];
 } __attribute__ ((packed));
 
 /* Control protocol reboot request */
@@ -149,6 +151,19 @@ static int modsctrl_get_version(uint32_t cportid, struct gb_operation_msg *msg)
                                NULL);
 }
 
+/* copy a string from src to target */
+/* NOTE: no boundary checking; do not use for inputted strings. */
+static inline char *cpstr(char *tgt, const char *src)
+{
+    size_t i;
+
+    for (i = 0; src[i] != '\0'; i++) {
+        tgt[i] = src[i];
+    }
+
+    return &tgt[i];
+}
+
 static int modsctrl_get_ids(uint32_t cportid, struct gb_operation_msg *msg)
 {
     struct mb_control_get_ids_response get_ids_resp;
@@ -163,6 +178,8 @@ static int modsctrl_get_ids(uint32_t cportid, struct gb_operation_msg *msg)
 #else
     get_ids_resp.slave_mask = 0;
 #endif
+
+    cpstr(get_ids_resp.fw_version_str, CONFIG_VERSION_STRING " " CONFIG_VERSION_BUILD);
 
     return greybus_send_response(cportid,
                                &msg->hdr,

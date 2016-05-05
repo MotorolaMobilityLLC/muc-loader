@@ -1,4 +1,4 @@
-# Copyright (c) 2016 Motorola.
+# Copyright (c) 2016 Motorola Mobility, LLC.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without

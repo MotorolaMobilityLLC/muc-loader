@@ -76,7 +76,7 @@ CopyTextROInit:
 
 LoopCopyTextROInit:
 	ldr	r0, =_sr_isrv
-	ldr	r3, =__fini_array_end
+	ldr	r3, =__read_only_end
 	adds	r2, r0, r1
 	cmp	r2, r3
 	bcc	CopyTextROInit

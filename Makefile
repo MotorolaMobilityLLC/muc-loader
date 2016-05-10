@@ -140,6 +140,7 @@ CSRCS      += $(CHIPSET_LC)_hal_rcc.c \
               $(CHIPSET_LC)_hal.c \
               $(CHIPSET_LC)_hal_cortex.c \
               $(CHIPSET_LC)_hal_gpio.c  \
+              $(CHIPSET_LC)_hal_i2c.c \
               $(CHIPSET_LC)_hal_spi.c  \
               $(CHIPSET_LC)_hal_dma.c  \
               $(CHIPSET_LC)_hal_flash.c \

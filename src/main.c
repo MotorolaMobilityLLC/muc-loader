@@ -45,6 +45,7 @@
 #include "datalink.h"
 #include "ramlog.h"
 #include "tftf.h"
+#include "eeprom.h"
 
 #include <stm32_hal_mod.h>
 #include <spi_flash_write.h>
@@ -194,11 +195,41 @@ static void _init(void)
   dl_init();
 }
 
+#ifdef CONFIG_EEPROM_PROGRAMMING
+void do_eeprom_programming(void)
+{
+#ifdef CONFIG_EEPROM_PROGRAMMING_ERASE_IDS
+  uint32_t tvid = 0xffffffff;
+  uint32_t tpid = 0xffffffff;
+#else
+  tftf_header *hdr = (tftf_header *)(mod_get_tftf_addr());
+  uint32_t tvid = tftf_get_vid(hdr);
+  uint32_t tpid = tftf_get_pid(hdr);
+#endif
+
+  if (device_eeprom_program_ids(tvid, tpid))
+      dbgprint("error programming ids\r\n");
+}
+#endif
+
+
 int main(void)
 {
   enum BootState bootState;
 
   SystemClock_Config();
+
+#ifdef CONFIG_EEPROM_PROGRAMMING
+  /* Reset of all peripherals, Initializes the Flash interface and the Systick. */
+  HAL_Init();
+
+  _init();
+
+  device_eeprom_init();
+
+  do_eeprom_programming();
+#endif
+
   bootState = CheckFlashMode();
 
   switch(bootState) {

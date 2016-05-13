@@ -148,6 +148,10 @@ CSRCS      += $(CHIPSET_LC)_hal_rcc.c \
               $(CHIPSET_LC)_hal_uart_ex.c \
               $(CHIPSET_LC)_hal_pwr_ex.c
 
+ifdef DEVICE_CSRCS
+ CSRCS += $(DEVICE_CSRCS)
+endif
+
 ifeq ($(CONFIG_DEBUG),y)
 CSRCS      += debug.c
 CSRCS      += $(CHIPSET_LC)_hal_uart.c

@@ -362,3 +362,19 @@ int validate_image_signature(const tftf_header *tf_header, uint16_t *secureIndex
     *secureIndex = sIndex;
     return 0;
 }
+
+uint32_t tftf_get_pid(const tftf_header *header)
+{
+    if (header)
+        return header->ara_pid;
+
+    return 0xffffffff;
+}
+
+uint32_t tftf_get_vid(const tftf_header *header)
+{
+    if (header)
+        return header->ara_vid;
+
+    return 0xffffffff;
+}

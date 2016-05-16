@@ -76,6 +76,7 @@ static const char flashing_flag[8] =  {'F', 'L', 'A', 'S', 'H', 'I', 'N', 'G'};
 #define FLASH_REASON_INVALID_HDR      4
 #define FLASH_REASON_INVALID_SIGN     5
 #define FLASH_REASON_INVALID_ADDR     6
+#define FLASH_REASON_NEW_IDS          7
 
 static uint32_t flash_reason;
 
@@ -148,12 +149,41 @@ static uint32_t Boot2Partition(int pIndex)
   return FLASH_REASON_INVALID_ADDR;
 }
 
+static inline bool pcard_changed(void)
+{
+  bool changed = false;
+#ifdef CONFIG_EEPROM_IDS
+  tftf_header *hdr = (tftf_header *)(mod_get_tftf_addr());
+  uint32_t tvid = tftf_get_vid(hdr);
+  uint32_t tpid = tftf_get_pid(hdr);
+  uint32_t evid;
+  uint32_t epid;
+
+  /* Read the eeprom vid/pid, if that fails all we can
+   * do is fall back to the base
+   */
+  get_board_id(&evid, &epid);
+
+  if (tvid != evid || tpid != epid) {
+    changed = true;
+  }
+#endif
+  return changed;
+}
+
 enum BootState CheckFlashMode(void)
 {
   char *bootModeFlag;
   enum BootState bootState = BOOT_STATE_NORMAL;
 
   MX_GPIO_Init();
+
+  if (pcard_changed())
+  {
+      flash_reason = FLASH_REASON_NEW_IDS;
+      bootState = BOOT_STATE_REQUEST_FLASH;
+      return bootState;
+  }
 
   /* Check For Flash Mode Bit */
   bootModeFlag = (char *)(FLASHMODE_FLAG_PAGE);
@@ -212,14 +242,13 @@ void do_eeprom_programming(void)
 }
 #endif
 
-
 int main(void)
 {
   enum BootState bootState;
 
   SystemClock_Config();
 
-#ifdef CONFIG_EEPROM_PROGRAMMING
+#if defined(CONFIG_EEPROM_PROGRAMMING) || defined(CONFIG_EEPROM_IDS)
   /* Reset of all peripherals, Initializes the Flash interface and the Systick. */
   HAL_Init();
 
@@ -227,7 +256,9 @@ int main(void)
 
   device_eeprom_init();
 
+#ifdef CONFIG_EEPROM_PROGRAMMING
   do_eeprom_programming();
+#endif
 #endif
 
   bootState = CheckFlashMode();
@@ -275,6 +306,11 @@ int main(void)
 
 int get_board_id(uint32_t *vid, uint32_t *pid)
 {
+#ifdef CONFIG_EEPROM_IDS
+  if (!eeprom_get_vid(vid) && !eeprom_get_pid(pid))
+      return 0;
+#endif
+
   if (vid) {
     *vid = _ids.board_vid;
   }

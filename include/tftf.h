@@ -105,9 +105,10 @@ typedef struct {
 
 typedef void (*image_entry_func)(void);
 
-uint8_t get_section_index(uint8_t section_type, tftf_section_descriptor *section);
+uint8_t get_section_index(uint8_t section_type, const tftf_section_descriptor *section);
 bool valid_tftf_header(const tftf_header * header);
 int validate_image_signature(const tftf_header *tftf, uint16_t *secureIndex);
+int tftf_get_load_addr(const tftf_header *header, uint8_t section_type, uint32_t *addr);
 uint32_t tftf_get_pid(const tftf_header *tftf);
 uint32_t tftf_get_vid(const tftf_header *tftf);
 

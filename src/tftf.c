@@ -235,7 +235,7 @@ bool valid_tftf_header(const tftf_header * header) {
     return true;
 }
 
-uint8_t get_section_index(uint8_t section_type, tftf_section_descriptor *section)
+uint8_t get_section_index(uint8_t section_type, const tftf_section_descriptor *section)
 {
     uint16_t ndx = 0;
 
@@ -377,4 +377,24 @@ uint32_t tftf_get_vid(const tftf_header *header)
         return header->ara_vid;
 
     return 0xffffffff;
+}
+
+int tftf_get_load_addr(const tftf_header *header, uint8_t section_type, uint32_t *addr)
+{
+    const tftf_section_descriptor *section;
+    bool section_contains_start = false;
+    bool end_of_sections = false;
+    uint16_t sIndex = 0;
+
+    sIndex = get_section_index(section_type, &header->sections[0]);
+    if(sIndex == TFTF_SECTION_END)
+        return -1;
+    section = &header->sections[sIndex];
+
+    if (!valid_tftf_section(section, header, &section_contains_start, &end_of_sections))
+        return -1;
+
+    *addr = section->section_load_address;
+
+    return 0;
 }

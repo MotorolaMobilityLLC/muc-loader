@@ -98,9 +98,6 @@ extern void MX_DMA_Init(void);
 extern int get_chip_uid(uint64_t *uid_high, uint64_t *uid_low);
 extern void reset_systick(void);
 
-/* flashing */
-#define FLASHMODE_FLAG_PAGE     (FLASH_BASE + FLASH_SIZE - FLASH_PAGE_SIZE)
-
 void ErasePage(uint32_t pageAddress);
 int flash_erase(uint32_t start_addr, uint32_t size);
 int program_flash_data(uint32_t start, uint32_t size, uint8_t *data);
@@ -108,6 +105,13 @@ int program_flash_lock(void);
 int program_flash_unlock(void);
 int program_flash_dword(const uint64_t *dword);
 uint32_t mod_get_tftf_addr(void);
+extern uint32_t mod_get_flashmode_addr(void);
+extern uint32_t mod_get_flashmode_addr(void);
+extern uint32_t mod_get_program_start_addr(void);
+extern uint32_t mod_get_program_end_addr(void);
+#ifdef CONFIG_DEBUG_FLASH
+extern void dump_partitions(void);
+#endif
 
 # ifdef CONFIG_SLAVE_APBE
 extern void apbe_power_on_flash(void);

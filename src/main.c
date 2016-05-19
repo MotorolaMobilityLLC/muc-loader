@@ -54,16 +54,8 @@
 typedef void (*Function_Pointer)(void);
 
 /* Private define ------------------------------------------------------------*/
-#define BOOT_PARTITION_INDEX	0
 #define JUMP_ADDRESS_OFFSET	4
-#define MMAP_PARTITION_NUM	4
 
-/* Private variables ---------------------------------------------------------*/
-struct memory_map {
-  char *pname;
-  uint32_t partition_start_address;
-  uint32_t partition_end_address;
-};
 /* USER CODE BEGIN PV */
 /* Private variables ---------------------------------------------------------*/
 static const char bootmode_flag[8] =  {'B', 'O', 'O', 'T', 'M', 'O', 'D', 'E'};
@@ -85,14 +77,7 @@ uint32_t get_flash_reason(void)
     return flash_reason;
 }
 
-static const struct memory_map mmap[MMAP_PARTITION_NUM] = {
-  {"nuttx", ((uint32_t)0x08008000), ((uint32_t)0x0807f800)},
-  {0, 0, 0},
-  {0, 0, 0},
-  {0, 0, 0},
-};
-
-static uint32_t Boot2Partition(int pIndex)
+static uint32_t Boot2Partition(void)
 {
   Function_Pointer  pJumpToFunction;
   uint32_t jumpAddress;
@@ -103,13 +88,7 @@ static uint32_t Boot2Partition(int pIndex)
   tftf_header *tf_header = (tftf_header *)(mod_get_tftf_addr());
 #endif
 
-  if(mmap[pIndex].pname == NULL)
-  {
-    return FLASH_REASON_INVALID_ADDR;
-  }
-
-  imageAddress = mmap[pIndex].partition_start_address;
-
+  imageAddress = mod_get_program_start_addr();
   if(imageAddress == 0)
   {
     return FLASH_REASON_INVALID_ADDR;
@@ -117,8 +96,8 @@ static uint32_t Boot2Partition(int pIndex)
 
   jumpAddress = *(__IO uint32_t*)(imageAddress + JUMP_ADDRESS_OFFSET);
 
-  if((jumpAddress >= mmap[pIndex].partition_start_address)
-		&& (jumpAddress <= mmap[pIndex].partition_end_address))
+  if ((jumpAddress >= mod_get_program_start_addr()) &&
+      (jumpAddress <= mod_get_program_end_addr()))
   {
 #ifdef CONFIG_MOD_SIGNATURE_VALIDATION
     if(!valid_tftf_header(tf_header))
@@ -186,7 +165,7 @@ enum BootState CheckFlashMode(void)
   }
 
   /* Check For Flash Mode Bit */
-  bootModeFlag = (char *)(FLASHMODE_FLAG_PAGE);
+  bootModeFlag = (char *)mod_get_flashmode_addr();
   if (!memcmp(bootModeFlag, bootmode_flag, sizeof(bootmode_flag)))
   {
     flash_reason = FLASH_REASON_BOOTMODE;
@@ -266,7 +245,7 @@ int main(void)
   switch(bootState) {
   case BOOT_STATE_NORMAL:
     MX_USART_UART_Init();
-    flash_reason = Boot2Partition(BOOT_PARTITION_INDEX);
+    flash_reason = Boot2Partition();
     break;
   case BOOT_STATE_REQUEST_FLASH:
     /* Erase the Flash Mode Barker */
@@ -341,11 +320,11 @@ int set_flashing_flag(void)
   char *bootModeFlag;
 
   /* Flash Mode Flag */
-  bootModeFlag = (char *)(FLASHMODE_FLAG_PAGE);
+  bootModeFlag = (char *)mod_get_flashmode_addr();
   if (memcmp(bootModeFlag, flashing_flag, sizeof(flashing_flag)))
   {
     /* write the flashmode flag */
-    return program_flash_data((uint32_t)(FLASHMODE_FLAG_PAGE),
+    return program_flash_data(mod_get_flashmode_addr(),
                       sizeof(flashing_flag), (uint8_t *)&flashing_flag[0]);
   } else {
     return 0;
@@ -354,7 +333,7 @@ int set_flashing_flag(void)
 
 void clr_flash_barker(void)
 {
-    ErasePage((uint32_t)(FLASHMODE_FLAG_PAGE));
+    ErasePage(mod_get_flashmode_addr());
 }
 
 int set_request_flash(void)

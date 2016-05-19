@@ -302,7 +302,11 @@ static int gbfw_get_firmware_response(gb_operation_header *header, void *data,
         } else
 #endif
         {
+            if (_gbfw_stage == GBFW_STAGE_MAIN) {
+                erase_tftf_header();
+            }
             flash_erase(fw_flash_data.fw_flash_addr, fw_flash_data.fw_remaining_size);
+
             set_flashing_flag();
 
             /* program the first packet */
@@ -393,7 +397,12 @@ static int gbfw_get_firmware_response(gb_operation_header *header, void *data,
 #ifdef CONFIG_APBE_FLASH
         if (gbfw_is_apbe_flash_stage())
             spi_write_to_flash_finish(&spi_write_ops);
+        else
 #endif
+        {
+
+            program_flash_lock();
+        }
 
         /* now that we are done flashing, if this is the main stage,
          * then we want to update the tf header section */

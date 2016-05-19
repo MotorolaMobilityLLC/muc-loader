@@ -37,20 +37,60 @@
 #include <debug.h>
 #include <greybus.h>
 #include "stm32l4xx_hal.h"
+#include <tftf.h>
 
 #include <stm32l4xx_flash.h>
 
 #include <stm32_hal_mod.h>
 
-#define TFTF_HDR_PAGE_ADDR      (FLASHMODE_FLAG_PAGE - FLASH_PAGE_SIZE)
+#define FLASH_BOUNDARY           (FLASH_BASE + FLASH_SIZE)
+
+#define PARTITION_BOOT_START      0x08000000
+#define PARTITION_BOOT_END        0x08007fff
+#define PARTITION_MAIN_START      0x08008000
+#define PARTITION_MAIN_END        (FLASH_BASE + FLASH_SIZE - 2 * FLASH_PAGE_SIZE - 1)
+#define PARTITION_TFTF_START      (FLASH_BASE + FLASH_SIZE - 2 * FLASH_PAGE_SIZE)
+#define PARTITION_TFTF_END        (FLASH_BOUNDARY - FLASH_PAGE_SIZE - 1)
+#define PARTITION_FLASHMODE_START (FLASH_BOUNDARY - FLASH_PAGE_SIZE)
+#define PARTITION_FLASHMODE_END   (FLASH_BOUNDARY - 1)
 
 /* Private function prototypes -----------------------------------------------*/
 static uint32_t GetPage(uint32_t Address);
 static uint32_t GetBank(uint32_t Address);
 
+#ifdef CONFIG_DEBUG_FLASH
+void dump_partitions(void)
+{
+  dbgprintx32("FLASH_BOUNDARY            0x", FLASH_BOUNDARY           , "\r\n");
+  dbgprintx32("PARTITION_BOOT_START      0x", PARTITION_BOOT_START     , "\r\n");
+  dbgprintx32("PARTITION_BOOT_END        0x", PARTITION_BOOT_END       , "\r\n");
+  dbgprintx32("PARTITION_TFTF_START      0x", PARTITION_TFTF_START     , "\r\n");
+  dbgprintx32("PARTITION_TFTF_END        0x", PARTITION_TFTF_END       , "\r\n");
+  dbgprintx32("PARTITION_MAIN_START      0x", PARTITION_MAIN_START     , "\r\n");
+  dbgprintx32("PARTITION_MAIN_END        0x", PARTITION_MAIN_END       , "\r\n");
+  dbgprintx32("PARTITION_FLASHMODE_START 0x", PARTITION_FLASHMODE_START, "\r\n");
+  dbgprintx32("PARTITION_FLASHMODE_END   0x", PARTITION_FLASHMODE_END  , "\r\n");
+}
+#endif
+
 uint32_t mod_get_tftf_addr(void)
 {
-  return (uint32_t)(TFTF_HDR_PAGE_ADDR);
+  return (uint32_t)(PARTITION_TFTF_START);
+}
+
+uint32_t mod_get_flashmode_addr(void)
+{
+    return (uint32_t)(PARTITION_FLASHMODE_START);
+}
+
+uint32_t mod_get_program_start_addr(void)
+{
+    return PARTITION_MAIN_START;
+}
+
+uint32_t mod_get_program_end_addr(void)
+{
+    return PARTITION_MAIN_END;
 }
 
 void ErasePage(uint32_t pageAddress)
@@ -140,8 +180,9 @@ int program_flash_lock(void)
 int program_flash_dword(const uint64_t *dword)
 {
     int rv;
-    dbgprintx32("program_flash_dword ", FLASHMODE_FLAG_PAGE, "\r\n");
-    rv = HAL_FLASH_Program(FLASH_TYPEPROGRAM_DOUBLEWORD, FLASHMODE_FLAG_PAGE, *dword);
+
+    dbgprintx32("program_flash_dword ", PARTITION_FLASHMODE_START, "\r\n");
+    rv = HAL_FLASH_Program(FLASH_TYPEPROGRAM_DOUBLEWORD, PARTITION_FLASHMODE_START, *dword);
     return rv;
 }
 
@@ -171,12 +212,21 @@ int program_flash_data(uint32_t start, uint32_t size, uint8_t *data)
   return 0;
 }
 
+/**
+ * @brief Erase the partition containing the TFTF Header
+ */
+void erase_tftf_header(void)
+{
+  ErasePage((uint32_t)(PARTITION_TFTF_START));
+}
+
+/**
+ * @brief Writes the contents fo the TFTF header to the TFTF_PARTITION
+ */
 int program_tftf_header(uint8_t *data, uint32_t size)
 {
-  ErasePage((uint32_t)(TFTF_HDR_PAGE_ADDR));
-
   HAL_FLASH_Unlock();
-  program_flash_data((uint32_t)(TFTF_HDR_PAGE_ADDR), size, data);
+  program_flash_data((uint32_t)(PARTITION_TFTF_START), size, data);
   HAL_FLASH_Lock();
 
   return 0;

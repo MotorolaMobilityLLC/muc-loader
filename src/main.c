@@ -84,15 +84,17 @@ static uint32_t Boot2Partition(void)
   uint32_t imageAddress;
 #ifdef CONFIG_MOD_SIGNATURE_VALIDATION
   uint16_t sIndex = 0;
-
-  tftf_header *tf_header = (tftf_header *)(mod_get_tftf_addr());
 #endif
+  tftf_header *tf_header = (tftf_header *)(mod_get_tftf_addr());
 
-  imageAddress = mod_get_program_start_addr();
-  if(imageAddress == 0)
+  if (!valid_tftf_header(tf_header))
   {
-    return FLASH_REASON_INVALID_ADDR;
+     dbgprint("valid_tftf_header failed\r\n");
+     return FLASH_REASON_INVALID_HDR;
   }
+
+  if (tftf_get_load_addr(tf_header, TFTF_SECTION_RAW_CODE, &imageAddress))
+    return FLASH_REASON_INVALID_ADDR;
 
   jumpAddress = *(__IO uint32_t*)(imageAddress + JUMP_ADDRESS_OFFSET);
 
@@ -100,13 +102,7 @@ static uint32_t Boot2Partition(void)
       (jumpAddress <= mod_get_program_end_addr()))
   {
 #ifdef CONFIG_MOD_SIGNATURE_VALIDATION
-    if(!valid_tftf_header(tf_header))
-    {
-      dbgprint("valid_tftf_header failed\r\n");
-      return FLASH_REASON_INVALID_HDR;
-    }
-
-    if(validate_image_signature(tf_header, &sIndex))
+    if (validate_image_signature(tf_header, &sIndex))
     {
       dbgprint("validate_image_signature failed\r\n");
       return FLASH_REASON_INVALID_SIGN;

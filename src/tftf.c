@@ -331,6 +331,11 @@ int validate_image_signature(const tftf_header *tf_header, uint16_t *secureIndex
         section++;
     }
 
+    if (!tftf.contain_signature) {
+        dbgprint("no signature\r\n");
+        return -1;
+    }
+
     /* the header is validated */
     section = &tftf.header.sections[0];
     sIndex = get_section_index(TFTF_SECTION_RAW_CODE, section);
@@ -357,6 +362,9 @@ int validate_image_signature(const tftf_header *tf_header, uint16_t *secureIndex
             sIndex = TFTF_SECTION_END;
             return -1;
         }
+    } else {
+        sIndex = TFTF_SECTION_END;
+        return -1;
     }
 
     *secureIndex = sIndex;

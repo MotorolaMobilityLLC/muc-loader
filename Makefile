@@ -229,15 +229,9 @@ ifeq ($(USE_EXT_MANIFEST_INC), y)
 $(OUT_DIR)/manifest.inc: $(EXT_MANIFEST_INC)
 	cp $(EXT_MANIFEST_INC) $@
 else
-$(OUT_DIR)/manifest.inc: $(OUT_DIR)/firmware.mnfb
-	xxd -i < $< > $@
-	echo "," >> $@
-	openssl dgst -sha256 -sign manifests/testkey_priv.key $< | xxd -i >> $@
+$(OUT_DIR)/manifest.inc: manifests/firmware.inc
+	cp $< $@
 endif
-
-$(OUT_DIR)/firmware.mnfb: manifests/firmware.mnfs
-	cp $< $(OUT_DIR)
-	cd out; manifesto firmware.mnfs $(CONFIG_ARCH_BOARDID_VID) $(CONFIG_ARCH_BOARDID_PID)
 
 $(OUT_DIR)/include/version.h: .version $(OUT_DIR) $(OUT_DIR)/include
 	@echo "#ifndef __VERSION_H__"       > $@

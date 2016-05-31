@@ -68,6 +68,7 @@ extern void device_console_deinit(void);
 extern void device_dma_init(void);
 extern void device_spi_mod_init(SPI_HandleTypeDef *_hspi);
 extern void device_spi_flash_init(SPI_HandleTypeDef *_hspi);
+extern void device_handle_exti(uint16_t GPIO_Pin);
 extern PinState mods_force_flash_get(void);
 extern void mod_dev_base_spi_reset(void);
 /* Is the mod currently attached to a base? */

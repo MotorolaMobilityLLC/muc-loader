@@ -351,6 +351,8 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
   if (mods_is_spi_csn(GPIO_Pin)) {
     mods_rfr_set(PIN_RESET);
     mods_muc_int_set(PIN_RESET);
+  } else {
+      device_handle_exti(GPIO_Pin);
   }
 }
 

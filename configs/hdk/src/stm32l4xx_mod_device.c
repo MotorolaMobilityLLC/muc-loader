@@ -43,6 +43,7 @@ void mods_gpio_clk_enable(void)
   __GPIOA_CLK_ENABLE();
   __GPIOB_CLK_ENABLE();
   __GPIOC_CLK_ENABLE();
+  __GPIOD_CLK_ENABLE();
   /* needed for port g */
   HAL_PWREx_EnableVddIO2();
   __HAL_RCC_PWR_CLK_ENABLE();
@@ -129,6 +130,38 @@ void device_gpio_init(void)
 
   HAL_NVIC_SetPriority(EXTI_MODS_SL_BPLUS_AIN_IRQ, 1, 0);
   HAL_NVIC_EnableIRQ(EXTI_MODS_SL_BPLUS_AIN_IRQ);
+
+#ifdef CONFIG_EEPROM_IDS
+  memset(&GPIO_InitStruct, 0, sizeof(GPIO_InitStruct));
+  GPIO_InitStruct.Pin = GPIO_PIN_PCARD_DET_N;
+  GPIO_InitStruct.Pull = GPIO_PULLUP;
+  GPIO_InitStruct.Mode = GPIO_MODE_IT_FALLING | GPIO_MODE_IT_RISING;
+  HAL_GPIO_Init(GPIO_PORT_PCARD_DET_N, &GPIO_InitStruct);
+
+  HAL_NVIC_SetPriority(EXTI_IRQ_PCARD_DET_N, 2, 0);
+  HAL_NVIC_EnableIRQ(EXTI_IRQ_PCARD_DET_N);
+#endif
+}
+
+#ifdef CONFIG_EEPROM_IDS
+static bool device_is_pcard_attach(uint16_t GPIO_Pin)
+{
+    return (GPIO_Pin == GPIO_PIN_9);
+}
+
+static void device_handle_pcard_attach()
+{
+    HAL_NVIC_SystemReset();
+}
+#endif
+
+void device_handle_exti(uint16_t GPIO_Pin)
+{
+#ifdef CONFIG_EEPROM_IDS
+  if (device_is_pcard_attach(GPIO_Pin)) {
+      device_handle_pcard_attach();
+  }
+#endif
 }
 
 void device_spi_mod_init(SPI_HandleTypeDef *_hspi)

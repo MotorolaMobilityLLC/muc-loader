@@ -82,6 +82,10 @@
 #define GPIO_PORT_CONSOLE_RX          GPIOC
 #define GPIO_PIN_CONSOLE_RX           GPIO_PIN_11
 
+#define GPIO_PORT_PCARD_DET_N         GPIOD
+#define GPIO_PIN_PCARD_DET_N          GPIO_PIN_9
+#define EXTI_IRQ_PCARD_DET_N          EXTI9_5_IRQn
+
 #define GPIO_PORT_APBE_PWR_EN         GPIOG
 #define GPIO_PIN_APBE_PWR_EN          GPIO_PIN_14
 

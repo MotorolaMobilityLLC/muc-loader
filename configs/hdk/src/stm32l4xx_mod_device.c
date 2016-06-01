@@ -126,7 +126,6 @@ void device_gpio_init(void)
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_HIGH;
   HAL_GPIO_Init(GPIO_PORT_APBE_RST_N, &GPIO_InitStruct);
-  apbe_reset();
 
   HAL_NVIC_SetPriority(EXTI_MODS_SL_BPLUS_AIN_IRQ, 1, 0);
   HAL_NVIC_EnableIRQ(EXTI_MODS_SL_BPLUS_AIN_IRQ);
@@ -199,6 +198,8 @@ void device_dma_init(void)
 
 void device_spi_flash_init(SPI_HandleTypeDef *_hspi)
 {
+  apbe_reset();
+
   /* Set spi sel gpio to enable muc to flash spi interface */
   mods_muc_set_spi_sel(PIN_SET);
 

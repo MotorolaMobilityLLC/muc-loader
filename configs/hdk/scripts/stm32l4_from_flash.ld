@@ -34,7 +34,7 @@ MEMORY {
     sram (rwx) : ORIGIN = 0x20000000, LENGTH = 48K  /* Leave 16K for dmesg */
 }
 
-_estack = 0x2000bfff;                     /* 48K of usable RAM after dmesg */
+_estack = 0x20016fff;                     /* 48K of usable RAM after dmesg */
 
 SECTIONS {
     /*

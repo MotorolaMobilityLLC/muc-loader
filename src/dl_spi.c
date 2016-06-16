@@ -359,7 +359,7 @@ static bool ack_handler(bool tx_attempted, enum ack ack_req)
     uint8_t wake_n = 0;
     uint8_t timeout = 0;
 #ifdef CONFIG_DEBUG_DATALINK
-    uint32_t dbg_tx_rx = tx_attempted << 16 | rx_success;
+    uint32_t dbg_tx_rx = tx_attempted << 16 | (uint16_t)ack_req;
     dbgprintx32("ack_handler 0x", dbg_tx_rx, "\r\n");
 #endif
 

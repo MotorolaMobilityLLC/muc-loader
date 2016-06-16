@@ -265,6 +265,7 @@ int main(void)
 
   while (1) {
     if (!mod_dev_is_attached()) {
+      dl_exit();
 #ifdef CONFIG_SPIN_WHILE_DETACHED
       dbgprint("Detached - SPINNING\r\n");
       while (!mod_dev_is_attached());

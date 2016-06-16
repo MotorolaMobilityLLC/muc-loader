@@ -213,6 +213,17 @@ void dl_init(void)
     g_spi_data.proto_ver = 0;
 }
 
+void dl_exit(void)
+{
+#ifdef CONFIG_DEBUG_DATALINK
+    dbgprint("dl_exit\r\n");
+#endif
+    mods_rfr_set(PIN_RESET);
+    mods_muc_int_set(PIN_RESET);
+    HAL_SPI_DMAStop(&gb_hspi);
+    mod_dev_base_spi_reset();
+}
+
 /* called from network layer */
 /* buf should point to the start of a network message */
 int datalink_send(uint8_t *buf, size_t len, msg_sent_cb cb, void *ctx)

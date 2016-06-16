@@ -52,6 +52,7 @@ extern void dl_set_protocol_type(e_protocol_type t);
 extern e_protocol_type dl_get_protocol_type(void);
 extern int process_sent_complete(void);
 extern void dl_init(void);
+extern void dl_exit(void);
 extern int datalink_send(uint8_t *buf, size_t len, msg_sent_cb cb, void *ctx);
 extern uint16_t datalink_get_max_payload_size(void);
 extern void dl_spi_error_handler(SPI_HandleTypeDef *_hspi);

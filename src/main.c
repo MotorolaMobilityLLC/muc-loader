@@ -266,13 +266,14 @@ int main(void)
   while (1) {
     if (!mod_dev_is_attached()) {
 #ifdef CONFIG_SPIN_WHILE_DETACHED
-      continue;
+      dbgprint("Detached - SPINNING\r\n");
+      while (!mod_dev_is_attached());
 #else
       dbgprint("Detached - STOP2\r\n");
       HAL_PWREx_EnterSTOP2Mode(PWR_STOPENTRY_WFI);
+#endif
       _init();
       dbgprint("Back\r\n");
-#endif
     }
 
     setup_exchange();

@@ -60,6 +60,20 @@ typedef void (*Function_Pointer)(void);
 /* Private variables ---------------------------------------------------------*/
 static const char bootmode_flag[8] =  {'B', 'O', 'O', 'T', 'M', 'O', 'D', 'E'};
 static const char flashing_flag[8] =  {'F', 'L', 'A', 'S', 'H', 'I', 'N', 'G'};
+static uint32_t tvid;
+static uint32_t tpid;
+static uint32_t evid;
+static uint32_t epid;
+#ifdef CONFIG_VALIDATE_PID
+static bool validate_pid = 1;
+#else
+static bool validate_pid;
+#endif
+#ifdef CONFIG_VALIDATE_VID
+static bool validate_vid = 1;
+#else
+static bool validate_vid;
+#endif
 
 /* debug variable for why we went into flash */
 #define FLASH_REASON_BOOTMODE         1
@@ -124,25 +138,24 @@ static uint32_t Boot2Partition(void)
   return FLASH_REASON_INVALID_ADDR;
 }
 
+
 static inline bool pcard_changed(void)
 {
   bool changed = false;
-#ifdef CONFIG_EEPROM_IDS
+
   tftf_header *hdr = (tftf_header *)(mod_get_tftf_addr());
-  uint32_t tvid = tftf_get_vid(hdr);
-  uint32_t tpid = tftf_get_pid(hdr);
-  uint32_t evid;
-  uint32_t epid;
+  tvid = tftf_get_vid(hdr);
+  tpid = tftf_get_pid(hdr);
 
   /* Read the eeprom vid/pid, if that fails all we can
    * do is fall back to the base
    */
   get_board_id(&evid, &epid);
 
-  if (tvid != evid || tpid != epid) {
+  if ((validate_vid && (tvid != evid)) ||
+      (validate_pid && (tpid != epid))) {
     changed = true;
   }
-#endif
   return changed;
 }
 
@@ -260,6 +273,19 @@ int main(void)
 
   dbgprint("\r\n--[MuC Loader v" CONFIG_VERSION_STRING ":" CONFIG_VERSION_BUILD "]\r\n");
   dbgprintx32("-Flash Mode (", flash_reason, ")\r\n");
+  if (flash_reason == FLASH_REASON_NEW_IDS) {
+      dbgprint("        TFTF    BOOTLOADER  CHECKED    \r\n");
+      dbgprintx32("VID: 0x", tvid, "\t"); dbgprintx32("0x", evid, "");
+      if (validate_vid)
+          dbgprint("   YES\r\n");
+      else
+          dbgprint("   NO\r\n");
+      dbgprintx32("PID: 0x", tpid, "\t"); dbgprintx32("0x", epid, "");
+      if (validate_pid)
+          dbgprint("   YES\r\n");
+      else
+          dbgprint("   NO\r\n");
+  }
 
   ramlog_reason();
 

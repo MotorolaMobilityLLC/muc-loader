@@ -196,21 +196,26 @@ enum BootState CheckFlashMode(void)
   return bootState;
 }
 
-static void _init(void)
+static void _init(bool stay_in_bl)
 {
   SystemClock_Config();
 
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
-  MX_DMA_Init();
   MX_USART_UART_Init();
-#ifdef CONFIG_APBE_FLASH
-  spi_flash_hal_init();
-#endif
-  /* Config SPI NSS in interrupt mode */
-  SPI_NSS_INT_CTRL_Config();
 
-  dl_init();
+  if (stay_in_bl)
+  {
+    MX_DMA_Init();
+
+#ifdef CONFIG_APBE_FLASH
+    spi_flash_hal_init();
+#endif
+    /* Config SPI NSS in interrupt mode */
+    SPI_NSS_INT_CTRL_Config();
+
+    dl_init();
+  }
 }
 
 #ifdef CONFIG_EEPROM_PROGRAMMING
@@ -240,7 +245,7 @@ int main(void)
   /* Reset of all peripherals, Initializes the Flash interface and the Systick. */
   HAL_Init();
 
-  _init();
+  _init(false);
 
   device_eeprom_init();
 
@@ -269,7 +274,7 @@ int main(void)
   /* Reset of all peripherals, Initializes the Flash interface and the Systick. */
   HAL_Init();
 
-  _init();
+  _init(true);
 
   dbgprint("\r\n--[MuC Loader v" CONFIG_VERSION_STRING ":" CONFIG_VERSION_BUILD "]\r\n");
   dbgprintx32("-Flash Mode (", flash_reason, ")\r\n");
@@ -299,7 +304,7 @@ int main(void)
       dbgprint("Detached - STOP2\r\n");
       HAL_PWREx_EnterSTOP2Mode(PWR_STOPENTRY_WFI);
 #endif
-      _init();
+      _init(true);
       dbgprint("Back\r\n");
     }
 

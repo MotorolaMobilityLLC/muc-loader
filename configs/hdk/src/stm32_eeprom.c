@@ -93,6 +93,13 @@ static int device_eeprom_read(uint8_t addr, uint8_t *data, uint16_t size)
 #else
     uint8_t msg[1] = { addr };
 #endif
+    PinState pcard_det;
+
+    pcard_det = HAL_GPIO_ReadPin(GPIO_PORT_PCARD_DET_N, GPIO_PIN_PCARD_DET_N);
+    if (pcard_det == PIN_SET) {
+        /* Skip read since pcard is not present */
+        return 0;
+    }
 
     status = HAL_I2C_IsDeviceReady(&hi2c, EEPROM_ADDR, 3, 1000);
     if (status != HAL_OK) {

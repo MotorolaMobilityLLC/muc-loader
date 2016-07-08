@@ -74,6 +74,9 @@
 #define GBFW_STAGE_APBE_SPI_FLASH  0x02
 #define GBFW_STAGE_MAIN            0x03
 
+/* number of attempts to write flash before reset */
+#define GBFW_MAX_RETRIES              3
+
 /* Greybus FirmWare request and response payloads */
 struct gbfw_protocol_version_request {
   uint8_t major, minor;
@@ -261,6 +264,8 @@ static int gbfw_get_firmware_response(gb_operation_header *header, void *data,
     uint32_t flash_addr;
     uint32_t flash_data_size;
     uint32_t pl_data_size;
+    int err = 0;
+    int err_count = 0;
 
     tftf_header *tf_header = (tftf_header *)data;
     data_ptr = (uint8_t *)data;
@@ -303,7 +308,18 @@ static int gbfw_get_firmware_response(gb_operation_header *header, void *data,
              fw_flash_data.fw_offset = TFTF_HEADER_SIZE;
              fw_flash_data.fw_remaining_size -= ((firmware_size_response.size - TFTF_HEADER_SIZE) -
                                                  spi_write_calc_total_len(data));
-             spi_write_to_flash_header(&spi_write_ops, data);
+             do {
+                 err = spi_write_to_flash_header(&spi_write_ops, data);
+                 if (err) {
+                     dbgprint("spi_write_to_flash_header error\r\n");
+                     err_count++;
+                 }
+             } while (err && err_count < GBFW_MAX_RETRIES);
+
+             if (err)
+                 HAL_NVIC_SystemReset();
+             else
+                 err_count = 0;
         } else
 #endif
         {
@@ -324,7 +340,18 @@ static int gbfw_get_firmware_response(gb_operation_header *header, void *data,
             dbgprint("\r\n");
 #endif
 
-            program_flash_data(flash_addr, flash_data_size, data_ptr);
+             do {
+                 err = program_flash_data(flash_addr, flash_data_size, data_ptr);
+                 if (err) {
+                     dbgprint("program_flash_data (hdr) error\r\n");
+                     err_count++;
+                }
+             } while (err && err_count < GBFW_MAX_RETRIES);
+
+             if (err)
+                 HAL_NVIC_SystemReset();
+             else
+                 err_count = 0;
         }
 
         fw_flash_data.fw_offset += (fw_flash_data.fw_request_size - TFTF_HEADER_SIZE);
@@ -346,8 +373,20 @@ static int gbfw_get_firmware_response(gb_operation_header *header, void *data,
         tf_header = (tftf_header *)tftf_buff;
 #ifdef CONFIG_APBE_FLASH
         if (gbfw_is_apbe_flash_stage()) {
-             spi_write_to_flash_data(&spi_write_ops, data,
-                                     fw_flash_data.new_payload_size);
+             do {
+                 err = spi_write_to_flash_data(&spi_write_ops, data,
+                                               fw_flash_data.new_payload_size);
+                 if (err) {
+                     dbgprint("spi_write_to_flash_data error\r\n");
+                     err_count++;
+                 }
+             } while (err && err_count < GBFW_MAX_RETRIES);
+
+             if (err)
+                 HAL_NVIC_SystemReset();
+             else
+                 err_count = 0;
+
              flash_data_size = fw_flash_data.new_payload_size;
         } else
 #endif
@@ -364,7 +403,18 @@ static int gbfw_get_firmware_response(gb_operation_header *header, void *data,
             dbgprint("\r\n");
 #endif
 
-            program_flash_data(flash_addr, flash_data_size, data_ptr);
+            do {
+                err = program_flash_data(flash_addr, flash_data_size, data_ptr);
+                if (err) {
+                    dbgprint("program_flash_data error\r\n");
+                    err_count++;
+                }
+             } while (err && err_count < GBFW_MAX_RETRIES);
+
+             if (err)
+                 HAL_NVIC_SystemReset();
+             else
+                 err_count = 0;
         }
 
         fw_flash_data.fw_offset += flash_data_size;

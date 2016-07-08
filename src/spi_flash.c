@@ -122,13 +122,13 @@ int spi_write_to_flash_header(const data_write_ops *ops, void *data)
 
     ops->erase(dst, tmp_header.flash_image_length);
     ops->write(header0_start, &tmp_header, sizeof(tmp_header));
-    ops->verify(header0_start, &tmp_header, sizeof(tmp_header));
+    result |= ops->verify(header0_start, &tmp_header, sizeof(tmp_header));
 
     ops->write(header1_start, &tmp_header, sizeof(tmp_header));
-    ops->verify(header1_start, &tmp_header, sizeof(tmp_header));
+    result |= ops->verify(header1_start, &tmp_header, sizeof(tmp_header));
 
     ops->write(tftf_start, tf_header, sizeof(*tf_header));
-    ops->verify(tftf_start, tf_header, sizeof(*tf_header));
+    result |= ops->verify(tftf_start, tf_header, sizeof(*tf_header));
 
     dst = tftf_start + sizeof(*tf_header);
 error:
@@ -137,14 +137,16 @@ error:
 
 int spi_write_to_flash_data(const data_write_ops *ops, void *src, uint32_t len)
 {
+    int result = 0;
+
 #ifdef CONFIG_DEBUG_SPI_FLASH
     dbgprintx32("spi_write_to_flash_data dst ", dst, "\r\n");
 #endif
     ops->write(dst, src, len);
-    ops->verify(dst, src, len);
+    result = ops->verify(dst, src, len);
 
     dst += len;
-    return 0;
+    return result;
 }
 
 void spi_write_to_flash_finish(const data_write_ops *ops)

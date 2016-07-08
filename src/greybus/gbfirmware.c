@@ -281,6 +281,11 @@ static int gbfw_get_firmware_response(gb_operation_header *header, void *data,
             return GB_FW_ERR_INVALID;
         }
 
+        if (set_flashing_flag()) {
+            dbgprint("Failed to set flashing flag\r\n");
+            HAL_NVIC_SystemReset();
+        }
+
         /* erase image copy address and size */
         fw_flash_data.fw_flash_addr = tf_header->sections[section_index].section_load_address;
         fw_flash_data.fw_remaining_size = firmware_size_response.size - TFTF_HEADER_SIZE;
@@ -306,8 +311,6 @@ static int gbfw_get_firmware_response(gb_operation_header *header, void *data,
                 erase_tftf_header();
             }
             flash_erase(fw_flash_data.fw_flash_addr, fw_flash_data.fw_remaining_size);
-
-            set_flashing_flag();
 
             /* program the first packet */
             data_ptr += sizeof(tftf_header);

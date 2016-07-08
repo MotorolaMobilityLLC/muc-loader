@@ -346,6 +346,7 @@ int get_chip_id(uint32_t *mfg, uint32_t *pid)
 
 int set_flashing_flag(void)
 {
+  int ret = 0;
   char *bootModeFlag;
 
   /* Flash Mode Flag */
@@ -353,11 +354,13 @@ int set_flashing_flag(void)
   if (memcmp(bootModeFlag, flashing_flag, sizeof(flashing_flag)))
   {
     /* write the flashmode flag */
-    return program_flash_data(mod_get_flashmode_addr(),
-                      sizeof(flashing_flag), (uint8_t *)&flashing_flag[0]);
-  } else {
-    return 0;
+    program_flash_unlock();
+    ret = program_flash_data(mod_get_flashmode_addr(),
+                             sizeof(flashing_flag),
+                             (uint8_t *)&flashing_flag[0]);
+    program_flash_lock();
   }
+  return ret;
 }
 
 void clr_flash_barker(void)

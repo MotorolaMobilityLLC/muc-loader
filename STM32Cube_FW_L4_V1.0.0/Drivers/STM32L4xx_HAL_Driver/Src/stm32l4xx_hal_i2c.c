@@ -331,7 +331,7 @@ HAL_StatusTypeDef HAL_I2C_Init(I2C_HandleTypeDef *hi2c)
   {
     if(hi2c->Init.AddressingMode == I2C_ADDRESSINGMODE_7BIT)
     {
-      hi2c->Instance->OAR1 = (I2C_OAR1_OA1EN | hi2c->Init.OwnAddress1);
+      hi2c->Instance->OAR1 = (I2C_OAR1_OA1EN | (hi2c->Init.OwnAddress1 << 1));
     }
     else /* I2C_ADDRESSINGMODE_10BIT */
     {

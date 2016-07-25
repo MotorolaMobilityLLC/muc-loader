@@ -744,7 +744,7 @@ HAL_StatusTypeDef HAL_I2C_Slave_Transmit(I2C_HandleTypeDef *hi2c, uint8_t *pData
     /* Process Locked */
     __HAL_LOCK(hi2c);
 
-    hi2c->State = HAL_I2C_STATE_SLAVE_BUSY_RX;
+    hi2c->State = HAL_I2C_STATE_SLAVE_BUSY_TX;
     hi2c->ErrorCode   = HAL_I2C_ERROR_NONE;
 
     /* Enable Address Acknowledge */

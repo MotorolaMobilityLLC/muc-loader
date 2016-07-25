@@ -128,6 +128,11 @@ ifeq ($(CONFIG_DATALINK_SPI),y)
 CSRCS      += dl_spi.c
 endif
 
+ifeq ($(CONFIG_DATALINK_I2C),y)
+CSRCS      += dl_i2c.c \
+              lib_crc16_poly8005.c
+endif
+
 ifeq ($(CONFIG_APBE_FLASH),y)
 CSRCS      += spi_write_w25q40.c \
 	      spi_flash.c

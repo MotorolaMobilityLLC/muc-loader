@@ -71,6 +71,9 @@ extern void device_dma_init(void);
 #ifdef CONFIG_DATALINK_SPI
 extern void device_spi_mod_init(SPI_HandleTypeDef *_hspi);
 #endif
+#ifdef CONFIG_DATALINK_I2C
+extern void device_i2c_mod_init(I2C_HandleTypeDef *_hi2c);
+#endif
 extern void device_spi_flash_init(SPI_HandleTypeDef *_hspi);
 extern void device_handle_exti(uint16_t GPIO_Pin);
 extern PinState mods_force_flash_get(void);

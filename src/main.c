@@ -384,43 +384,52 @@ int set_request_flash(void)
   */
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
 {
+#ifdef CONFIG_DATALINK_SPI
   if (mods_is_spi_csn(GPIO_Pin)) {
     mods_rfr_set(PIN_RESET);
     mods_muc_int_set(PIN_RESET);
-  } else {
+  } else
+#endif
+  {
       device_handle_exti(GPIO_Pin);
   }
 }
 
+#if defined(CONFIG_DATALINK_SPI) || defined(CONFIG_APBE_FLASH)
 void HAL_SPI_ErrorCallback(SPI_HandleTypeDef *_hspi)
 {
+#ifdef CONFIG_DATALINK_SPI
   if (_hspi->Instance == MOD_TO_BASE_SPI) {
     dl_spi_error_handler(_hspi);
-  }
-#ifdef CONFIG_APBE_FLASH
-  else if (_hspi->Instance == MOD_TO_SPI_FLASH) {
-    spi_flash_error_handler(_hspi);
-  }
+  } else
 #endif
-  else {
+#ifdef CONFIG_APBE_FLASH
+  if (_hspi->Instance == MOD_TO_SPI_FLASH) {
+    spi_flash_error_handler(_hspi);
+  } else
+#endif
+  {
     dbgprintx32("ERR Invalid hspi ", (uint32_t)_hspi->Instance, "\r\n");
   }
 }
 
 void HAL_SPI_TxRxCpltCallback(SPI_HandleTypeDef *_hspi)
 {
+#ifdef CONFIG_DATALINK_SPI
   if (_hspi->Instance == MOD_TO_BASE_SPI) {
     dl_spi_transfer_complete(_hspi);
-  }
-#ifdef CONFIG_APBE_FLASH
-  else if (_hspi->Instance == MOD_TO_SPI_FLASH) {
-    spi_flash_transfer_complete(_hspi);
-  }
+  } else
 #endif
-  else {
+#ifdef CONFIG_APBE_FLASH
+  if (_hspi->Instance == MOD_TO_SPI_FLASH) {
+    spi_flash_transfer_complete(_hspi);
+  } else
+#endif
+  {
     dbgprintx32("TxRx Invalid hspi ", (uint32_t)_hspi->Instance, "\r\n");
   }
 }
+#endif
 
 #ifdef USE_FULL_ASSERT
 /**

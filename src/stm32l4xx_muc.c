@@ -69,10 +69,12 @@ void chip_reset_irqs(void)
   }
 }
 
+#ifdef CONFIG_DATALINK_SPI
 bool mods_is_spi_csn(uint16_t pin)
 {
   return (pin == GPIO_PIN_SPI_CS_N);
 }
+#endif
 
 int get_chip_uid(uint64_t *uid_high, uint64_t *uid_low)
 {

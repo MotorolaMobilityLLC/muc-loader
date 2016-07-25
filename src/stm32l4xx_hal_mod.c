@@ -76,6 +76,7 @@ uint32_t mods_getms(void)
     return HAL_GetTick();
 }
 
+#ifdef CONFIG_DATALINK_SPI
 /**
  * Set the MISO line to reflect the ACK or NACK of the
  * message from the core.
@@ -131,6 +132,7 @@ void mods_spi_restore(void)
     GPIO_InitStruct.Alternate = GPIO_AF5_SPI2;
     HAL_GPIO_Init(GPIO_MODS_SPI_PORT, &GPIO_InitStruct);
 }
+#endif
 
 void SPI_NSS_INT_CTRL_Config(void)
 {
@@ -144,15 +146,16 @@ void SPI_NSS_INT_CTRL_Config(void)
   GPIO_InitStruct.Speed = GPIO_SPEED_HIGH;
   HAL_GPIO_Init(GPIO_PORT_MUC_INT, &GPIO_InitStruct);
 
+#ifdef CONFIG_DATALINK_SPI
   /*Configure GPIO pin : PB12 */
   memset(&GPIO_InitStruct, 0, sizeof(GPIO_InitStruct));
   GPIO_InitStruct.Pin = GPIO_PIN_SPI_CS_N;
   GPIO_InitStruct.Mode = GPIO_MODE_IT_FALLING;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(GPIO_PORT_SPI_CS_N, &GPIO_InitStruct);
+#endif
 
   /* Enable and set EXTI line 12 Interrupt to the lowest priority */
   HAL_NVIC_SetPriority(EXTI15_10_IRQn, 2, 0);
   HAL_NVIC_EnableIRQ(EXTI15_10_IRQn);
 }
-

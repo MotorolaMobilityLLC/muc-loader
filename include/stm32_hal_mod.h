@@ -45,7 +45,9 @@ typedef enum
   PIN_SET
 } PinState;
 
+#ifdef CONFIG_DATALINK_SPI
 extern bool mods_is_spi_csn(uint16_t pin);
+#endif
 extern void mods_rfr_set(PinState pstate);
 extern PinState mods_rfr_get(void);
 extern void mods_wake_n_set(PinState pstate);
@@ -66,7 +68,9 @@ extern void device_gpio_init(void);
 extern void device_console_init(void);
 extern void device_console_deinit(void);
 extern void device_dma_init(void);
+#ifdef CONFIG_DATALINK_SPI
 extern void device_spi_mod_init(SPI_HandleTypeDef *_hspi);
+#endif
 extern void device_spi_flash_init(SPI_HandleTypeDef *_hspi);
 extern void device_handle_exti(uint16_t GPIO_Pin);
 extern PinState mods_force_flash_get(void);

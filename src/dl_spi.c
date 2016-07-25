@@ -243,16 +243,17 @@ static int dl_send_dl_msg(uint8_t id,
                           msg_sent_cb cb,
                           void *ctx)
 {
-    struct mods_spi_msg *spi_msg = (struct mods_spi_msg *)&aTxBuffer[0];
-    unsigned char *payload = &spi_msg->dl_msg.dl_pl[0];
+    struct spi_msg *spi_msg = (struct spi_msg *)aTxBuffer;
+    struct spi_dl_msg *spi_dl_msg = (struct spi_dl_msg *)spi_msg->payload;
+    uint8_t *payload = spi_dl_msg->payload;
 
-    spi_msg->dl_msg.mesg_id = id | status;
+    spi_dl_msg->mesg_id = id | status;
 
     if (payload_size != 0 && payload_data != NULL) {
         memcpy(payload, payload_data, payload_size);
     }
 
-    dl_set_txp_hdr(&aTxBuffer[0], MSG_TYPE_DL | HDR_BIT_VALID);
+    dl_set_txp_hdr(&aTxBuffer[0], MSG_TYPE_DL | HDR_BIT_VALID | HDR_BIT_PKT1);
     g_spi_data.respReady = true;
     dl_set_sent_cb(cb, ctx);
 

@@ -115,7 +115,6 @@ CSRCS      += \
 	      modsctrl.c \
 	      gbfirmware.c \
 	      network.c \
-	      dl_spi.c \
 	      tftf.c \
 	      crypto.c \
 	      public_keys.c \
@@ -124,6 +123,10 @@ CSRCS      += \
 	      $(CHIPSET_LC)_muc.c \
 	      $(CHIPSET_LC)_mod_device.c \
 	      $(CHIPSET_LC)_hal_mod.c
+
+ifeq ($(CONFIG_DATALINK_SPI),y)
+CSRCS      += dl_spi.c
+endif
 
 ifeq ($(CONFIG_APBE_FLASH),y)
 CSRCS      += spi_write_w25q40.c \

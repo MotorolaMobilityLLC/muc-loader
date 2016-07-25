@@ -79,38 +79,6 @@ struct gb_operation_msg {
 
 #define MODS_CONTROL_CPORT 0xFFFF
 
-#define HDR_BIT_VALID  (0x01 << 7)  /* 1 = valid packet, 0 = dummy packet */
-#define HDR_BIT_TYPE   (0x01 << 6)  /* SPI message type, datalink or network */
-#define HDR_BIT_PKTS   (0x3F << 0)  /* How many additional packets to expect */
-
-#define MSG_TYPE_DL    (0 << 6)     /* Packet for/from data link layer */
-#define MSG_TYPE_NW    (1 << 6)     /* Packet for/from network layer */
-
-struct mods_msg
-{
-    uint16_t  cport;
-    uint8_t gb_op_hdr[];
-} __attribute__ ((packed));
-
-struct dl_payload_msg
-{
-    uint8_t  mesg_id;
-    uint8_t  dl_pl[];
-} __attribute__ ((packed));
-
-#ifndef __GNUC__
-#pragma anon_unions
-#endif
-struct mods_spi_msg
-{
-    uint8_t  hdr_bits;
-    uint8_t  reserved;
-    union {
-        struct  mods_msg m_msg;
-        struct  dl_payload_msg dl_msg;
-    };
-} __attribute__ ((packed));
-
 typedef void (*msg_sent_cb)(int status, void *cntx);
 
 int control_cport_handler(uint32_t cportid,

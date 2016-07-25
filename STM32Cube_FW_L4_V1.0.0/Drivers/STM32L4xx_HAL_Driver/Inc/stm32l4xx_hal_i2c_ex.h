@@ -33,7 +33,7 @@
   * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
   *
   ******************************************************************************
-  */ 
+  */
 
 /* Define to prevent recursive inclusion -------------------------------------*/
 #ifndef __STM32L4xx_HAL_I2C_EX_H
@@ -44,7 +44,7 @@
 #endif
 
 /* Includes ------------------------------------------------------------------*/
-#include "stm32l4xx_hal_def.h"  
+#include "stm32l4xx_hal_def.h"
 
 /** @addtogroup STM32L4xx_HAL_Driver
   * @{
@@ -52,9 +52,9 @@
 
 /** @addtogroup I2CEx
   * @{
-  */ 
+  */
 
-/* Exported types ------------------------------------------------------------*/ 
+/* Exported types ------------------------------------------------------------*/
 /* Exported constants --------------------------------------------------------*/
 
 /** @defgroup I2CEx_Exported_Constants
@@ -83,11 +83,11 @@
 /**
   * @}
   */
-    
+
 /**
   * @}
-  */ 
-  
+  */
+
 /* Exported macro ------------------------------------------------------------*/
 /* Exported functions --------------------------------------------------------*/
 
@@ -106,7 +106,7 @@ void HAL_I2CEx_DisableFastModePlus(uint32_t ConfigFastModePlus);
 
 /**
   * @}
-  */ 
+  */
 
 /* Private macros ------------------------------------------------------------*/
 /** @defgroup I2C_Private_Macro I2C Private Macros
@@ -126,7 +126,7 @@ void HAL_I2CEx_DisableFastModePlus(uint32_t ConfigFastModePlus);
                                           (((__CONFIG__) & (I2C_FASTMODEPLUS_I2C3)) == I2C_FASTMODEPLUS_I2C3))
 /**
   * @}
-  */ 
+  */
 
 /* Private Functions ---------------------------------------------------------*/
 /** @defgroup I2C_Private_Functions I2C Private Functions
@@ -135,16 +135,16 @@ void HAL_I2CEx_DisableFastModePlus(uint32_t ConfigFastModePlus);
 /* Private functions are defined in stm32l4xx_hal_i2c_ex.c file */
 /**
   * @}
-  */ 
-
-/**
-  * @}
-  */ 
+  */
 
 /**
   * @}
   */
-  
+
+/**
+  * @}
+  */
+
 #ifdef __cplusplus
 }
 #endif

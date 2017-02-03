@@ -47,13 +47,13 @@ PinState mods_rfr_get(void)
 void mods_wake_n_set(PinState pstate)
 {
     /* On this board, WAKE_N is active low */
-    HAL_GPIO_WritePin(GPIO_PORT_WAKE_N, GPIO_PIN_0, pstate);
+    HAL_GPIO_WritePin(GPIO_PORT_WAKE_N, GPIO_PIN_WAKE_N, pstate);
 }
 
 PinState mods_wake_n_get(void)
 {
     /* On this board, WAKE_N is active low */
-    return HAL_GPIO_ReadPin(GPIO_PORT_WAKE_N, GPIO_PIN_0);
+    return HAL_GPIO_ReadPin(GPIO_PORT_WAKE_N, GPIO_PIN_WAKE_N);
 }
 
 void mods_muc_int_set(PinState pstate)

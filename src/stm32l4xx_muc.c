@@ -181,17 +181,18 @@ void MX_GPIO_Init(void)
   /* GPIO Ports Clock Enable */
   mods_gpio_clk_enable();
 
- /*Configure GPIO pin : RDY/RFR */
+  /*Configure GPIO pin : RDY/RFR */
+  memset(&GPIO_InitStruct, 0, sizeof(GPIO_InitStruct));
   GPIO_InitStruct.Pin = GPIO_PIN_RFR;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
-  GPIO_InitStruct.Speed = GPIO_SPEED_HIGH;
   HAL_GPIO_Init(GPIO_PORT_RFR, &GPIO_InitStruct);
 
   mods_muc_int_set(PIN_RESET);
   mods_rfr_set(PIN_RESET);
 
   /*Configure GPIO pin : WAKE_N (input) */
+  memset(&GPIO_InitStruct, 0, sizeof(GPIO_InitStruct));
   GPIO_InitStruct.Pin = GPIO_PIN_WAKE_N;
   GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
   GPIO_InitStruct.Pull = GPIO_NOPULL;

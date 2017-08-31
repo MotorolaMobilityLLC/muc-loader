@@ -105,9 +105,9 @@ SECTIONS {
      *  DATA
      */
     . = ALIGN(4);
+    _sidata = LOADADDR(.data);
     .data : {
         _sdata = ABSOLUTE(.);
-        _sidata = _sdata;
         *(.data .data.*)
         *(.gnu.linkonce.d.*)
         _edata = ABSOLUTE(.);

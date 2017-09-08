@@ -249,7 +249,8 @@ static uint32_t GetPage(uint32_t Addr)
   else
   {
     /* Bank 2 */
-    page = (Addr - (FLASH_BASE + FLASH_BANK_SIZE)) / FLASH_PAGE_SIZE;
+    page = (Addr - (FLASH_BASE + FLASH_BANK_SIZE)) / FLASH_PAGE_SIZE +
+            FLASH_BANK_2_PAGE_BASE;
   }
 
   return page;
